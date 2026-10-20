@@ -92,7 +92,9 @@
     .feed-body strong { color: var(--text); }
     .quote { margin-top: 10px; border-left: 2px solid #394247; padding: 8px 10px; background: #0d1113; color: var(--soft); font-size: 12px; }
     .pair-action { margin-left: 40px; display: flex; align-items: center; gap: 9px; padding: 9px 10px; border: 1px solid var(--line); background: #0d1113; border-radius: 4px; }
-    .token-icon { width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; background: #282f33; font-size: 10px; font-weight: 700; }
+    .token-icon { width:26px; height:26px; flex:0 0 26px; border-radius:50%; display:grid; place-items:center; background:#282f33; font-size:10px; font-weight:700; overflow:hidden; }
+    .token-icon img { width:100%; height:100%; display:block; object-fit:cover; }
+    .token-icon.fallback { color:var(--soft); border:1px solid #414b50; }
     .pair-main { flex: 1; min-width: 0; }
     .pair-main strong { font-size: 12px; }
     .pair-main span { color: var(--muted); font-size: 11px; margin-left: 7px; }
@@ -376,6 +378,7 @@
     .market-row { display:grid; grid-template-columns:24px minmax(92px,1fr) auto auto; gap:9px; padding:10px 5px; align-items:center; font-size:11px; border-bottom:1px solid var(--line); transition:background .15s ease; }.market-row:last-child { border-bottom:0; }.market-row:hover { background:var(--surface-2); }.market-row > span:first-child { color:var(--muted); font-variant-numeric:tabular-nums; }.market-row:nth-child(2) > span:first-child,.market-row:nth-child(3) > span:first-child,.market-row:nth-child(4) > span:first-child { color:var(--lime); font-weight:700; }.market-row em { color:var(--lime); font-style:normal; text-align:right; font-variant-numeric:tabular-nums; }.market-row small { color:var(--soft); font-variant-numeric:tabular-nums; }
     .market-row b { display:flex; align-items:center; gap:8px; }
     .market-token-icon { width:23px; height:23px; display:inline-grid; place-items:center; flex:0 0 23px; border-radius:50%; background:#283136; color:#f4f7f8; font-size:7px; border:1px solid #414d52; }
+    .market-token-icon img { width:100%; height:100%; display:block; object-fit:cover; border-radius:50%; }
     .market-token-icon[data-token="BTC"] { background:#3b2d18; color:#f7a92c; border-color:#684a1d; }.market-token-icon[data-token="ETH"] { background:#292d43; color:#aeb9ff; border-color:#454c76; }.market-token-icon[data-token="SOL"] { background:#18352f; color:#55f2bb; border-color:#286052; }
     .market-list-head { display:grid; grid-template-columns:24px minmax(92px,1fr) auto auto; gap:9px; padding:7px 5px; color:var(--muted); font-size:9px; border-bottom:1px solid var(--line); }.market-list-head span:nth-child(3),.market-list-head span:nth-child(4) { text-align:right; }
     .market-rank-tabs { display:flex; gap:18px; margin:13px 0 7px; border-bottom:1px solid var(--line); }
@@ -481,6 +484,9 @@
     .position-trader .avatar { width:28px; height:28px; font-size:9px; }
     .position-trader strong { display:block; font-size:11px; }
     .position-trader small { margin-top:2px; }
+    .manage-account-cell { display:flex; align-items:center; gap:9px; }
+    .manage-account-cell .avatar { width:30px; height:30px; flex:0 0 30px; font-size:9px; }
+    .manage-account-cell strong { display:block; font-size:11px; }
     .filter-active { color:var(--lime)!important; }
     .bookmark-btn.saved { color:var(--lime); background:#202c16; border-radius:4px; }
     .trader-card.is-hidden, .news-card.is-hidden, .side-feed-card.is-hidden { display:none; }
@@ -734,6 +740,33 @@
     const fullFeedList = $('#fullFeedList');
     if(fullFeedList && detailFeedList) fullFeedList.innerHTML = detailFeedList.innerHTML;
     renderIcons();
+    $$('.news-market .token-icon, .side-market .token-icon').forEach(icon => {
+      const symbol = icon.textContent.trim().toLowerCase();
+      const fallback = icon.textContent.trim();
+      const logo = new Image();
+      logo.src = `https://assets.coincap.io/assets/icons/${symbol}@2x.png`;
+      logo.alt = `${fallback} logo`;
+      logo.addEventListener('error', () => {
+        icon.textContent = fallback;
+        icon.classList.add('fallback');
+      });
+      icon.textContent = '';
+      icon.appendChild(logo);
+    });
+    const feedAvatarSources = [
+      { match:'machibigbrother', url:'https://unavatar.io/x/machibigbrother', fallback:'MB' },
+      { match:'岚序', url:'https://i.pravatar.cc/96?img=12', fallback:'岚' },
+      { match:'lanxu_demo', url:'https://i.pravatar.cc/96?img=12', fallback:'岚' },
+      { match:'零度研究', url:'https://i.pravatar.cc/96?img=33', fallback:'零' },
+      { match:'zero_demo', url:'https://i.pravatar.cc/96?img=33', fallback:'零' }
+    ];
+    $$('.news-card[data-source="kol"], .side-feed-card[data-source="kol"]').forEach(card => {
+      const source = feedAvatarSources.find(item => card.textContent.toLowerCase().includes(item.match.toLowerCase()));
+      const avatar = $('.avatar', card);
+      if(!source || !avatar) return;
+      avatar.innerHTML = `<img src="${source.url}" alt="KOL avatar">`;
+      $('img',avatar).addEventListener('error', () => { avatar.textContent = source.fallback; });
+    });
     const leaderGrid = $('.leader-grid');
     if(leaderGrid && leaderGrid.children.length === 4){
       leaderGrid.append(leaderGrid.children[0].cloneNode(true), leaderGrid.children[1].cloneNode(true));
@@ -754,11 +787,21 @@
       '0x92Bd5E1A6407C2F938AB471D83E20F61B4C8C610',
       '0xA16c38F7D502B91E64C8A7D21F093B5E8A2CD284'
     ];
+    const traderAvatars = [
+      'https://unavatar.io/x/machibigbrother',
+      'https://i.pravatar.cc/96?img=12',
+      'https://i.pravatar.cc/96?img=33',
+      'https://i.pravatar.cc/96?img=47',
+      'https://i.pravatar.cc/96?img=15',
+      'https://i.pravatar.cc/96?img=44'
+    ];
     $$('.trader-card').forEach((card,index) => {
       const profile = traderProfiles[index]; if(!profile) return;
       $('.info strong',card).childNodes[0].nodeValue = profile[0] + ' ';
-      $('.avatar',card).textContent = profile[1]; $('.info small',card).textContent = profile[2];
-      if(index === 0) $('.avatar',card).innerHTML = '<img src="https://unavatar.io/x/machibigbrother" alt="Machi Big Brother">';
+      const traderAvatar = $('.avatar',card);
+      traderAvatar.innerHTML = `<img src="${traderAvatars[index]}" alt="${profile[0]}">`;
+      $('img',traderAvatar).addEventListener('error', () => { traderAvatar.textContent = profile[1]; });
+      $('.info small',card).textContent = profile[2];
       const address = $('.card-address',card);
       address.childNodes[0].nodeValue = profile[3];
       address.title = traderAddresses[index];
@@ -915,6 +958,12 @@
     const marketAttention = $('#intel-view .market-panel');
     if(marketAttention){
       marketAttention.insertAdjacentHTML('beforebegin', `<div class="recommended-copy-panel"><div class="recommended-copy-head"><b>推荐跟单用户</b><span>综合表现 · 5 人</span></div><div class="recommended-trader"><span class="avatar green"><img src="https://unavatar.io/x/machibigbrother" alt="Machi Big Brother"></span><div class="recommended-trader-info"><strong>Machi Big Brother <span class="badge">已认证</span></strong><small>328 人跟单</small></div><div class="recommended-trader-metric"><b>+128,450</b><small>累计收益 USDC</small></div><span class="recommended-arrow">›</span></div><div class="recommended-trader"><span class="avatar blue">零</span><div class="recommended-trader-info"><strong>零度研究 <span class="badge">已认证</span></strong><small>196 人跟单</small></div><div class="recommended-trader-metric"><b>+84,216</b><small>累计收益 USDC</small></div><span class="recommended-arrow">›</span></div><div class="recommended-trader"><span class="avatar gold">鲸</span><div class="recommended-trader-info"><strong>鲸落 <span class="badge">已认证</span></strong><small>142 人跟单</small></div><div class="recommended-trader-metric"><b>+62,180</b><small>累计收益 USDC</small></div><span class="recommended-arrow">›</span></div><div class="recommended-trader"><span class="avatar">北</span><div class="recommended-trader-info"><strong>北辰 <span class="badge">已认证</span></strong><small>118 人跟单</small></div><div class="recommended-trader-metric"><b>+48,920</b><small>累计收益 USDC</small></div><span class="recommended-arrow">›</span></div><div class="recommended-trader"><span class="avatar blue">波</span><div class="recommended-trader-info"><strong>波段旅人 <span class="badge">已认证</span></strong><small>96 人跟单</small></div><div class="recommended-trader-metric"><b>+36,714</b><small>累计收益 USDC</small></div><span class="recommended-arrow">›</span></div></div>`);
+      $$('.recommended-trader').forEach((row,index) => {
+        const avatar = $('.avatar', row);
+        const name = $('.recommended-trader-info strong', row).childNodes[0].textContent.trim();
+        avatar.innerHTML = `<img src="${traderAvatars[index]}" alt="${name}">`;
+        $('img',avatar).addEventListener('error', () => { avatar.textContent = name.slice(0,1); });
+      });
       $$('.recommended-trader').forEach(row => row.addEventListener('click', showDetail));
       $('.side-panel-head b', marketAttention).textContent = '市场关注';
       $('.market-rank-tabs', marketAttention).insertAdjacentHTML('afterbegin', '<button class="market-rank-tab active" data-rank="hot">热门</button>');
@@ -925,7 +974,9 @@
         list.insertAdjacentHTML('afterbegin', '<div class="market-list-head"><span>#</span><span>合约</span><span>最新价</span><span>24h</span></div>');
         $$('.market-row b', list).forEach(pair => {
           const symbol = pair.textContent.replace('USDC','');
-          pair.insertAdjacentHTML('afterbegin', `<span class="market-token-icon" data-token="${symbol}">${symbol.slice(0,3)}</span>`);
+          pair.insertAdjacentHTML('afterbegin', `<span class="market-token-icon" data-token="${symbol}"><img src="https://assets.coincap.io/assets/icons/${symbol.toLowerCase()}@2x.png" alt="${symbol} logo"></span>`);
+          const icon = $('.market-token-icon', pair);
+          $('img', icon).addEventListener('error', () => { icon.textContent = symbol.slice(0,3); });
         });
       });
     }
@@ -1003,6 +1054,27 @@
     $$('#copyPositionsPanel th').forEach(th => {
       if(['未实现盈亏','已实现盈亏'].includes(th.textContent.trim())) th.textContent += '（USDC）';
     });
+    const manageAvatarSources = {
+      '岚序':'https://i.pravatar.cc/96?img=12',
+      '零度研究':'https://i.pravatar.cc/96?img=33',
+      '鲸落':'https://i.pravatar.cc/96?img=47',
+      '北辰':'https://i.pravatar.cc/96?img=15'
+    };
+    function setManageAvatar(avatar,name){
+      const url = manageAvatarSources[name];
+      if(!avatar || !url) return;
+      avatar.innerHTML = `<img src="${url}" alt="${name}">`;
+      $('img',avatar).addEventListener('error', () => { avatar.textContent = name.slice(0,1); });
+    }
+    $$('#manage-view .data-panel:first-of-type tbody tr, #subscriptionAccountsPanel tbody tr').forEach(row => {
+      const cell = row.cells[0];
+      const name = [...cell.childNodes].find(node => node.nodeType === Node.TEXT_NODE)?.textContent.trim();
+      const address = $('small',cell)?.textContent || '';
+      if(!name) return;
+      cell.innerHTML = `<div class="manage-account-cell"><span class="avatar"></span><span><strong>${name}</strong><small>${address}</small></span></div>`;
+      setManageAvatar($('.avatar',cell),name);
+    });
+    $$('.position-trader').forEach(item => setManageAvatar($('.avatar',item),$('strong',item).textContent.trim()));
     $$('.copy-position-tab').forEach(btn => btn.addEventListener('click', () => {
       $$('.copy-position-tab').forEach(tab => tab.classList.toggle('active', tab === btn));
       $$('.position-table-view').forEach(panel => panel.hidden = panel.dataset.positionPanel !== btn.dataset.positionView);
@@ -1040,7 +1112,7 @@
     }));
     $$('.manageStop').forEach(btn => btn.addEventListener('click', () => {
       const accountRow = btn.closest('tr');
-      const traderName = accountRow.cells[0].childNodes[0]?.textContent.trim();
+      const traderName = $('strong',accountRow.cells[0])?.textContent.trim();
       $$('#copyPositionsPanel [data-position-panel="current"] tbody tr').forEach(row => {
         if(traderName && row.textContent.includes(traderName)) row.remove();
       });
