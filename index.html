@@ -487,6 +487,10 @@
     .manage-account-cell { display:flex; align-items:center; gap:9px; }
     .manage-account-cell .avatar { width:30px; height:30px; flex:0 0 30px; font-size:9px; }
     .manage-account-cell strong { display:block; font-size:11px; }
+    .manage-data-tabs { display:flex; gap:26px; margin:0 0 14px; border-bottom:1px solid var(--line); }
+    .manage-data-tab { position:relative; padding:12px 0; border:0; background:transparent; color:var(--muted); cursor:pointer; font-size:12px; }
+    .manage-data-tab.active { color:var(--text); font-weight:600; }
+    .manage-data-tab.active::after { content:""; position:absolute; left:0; right:0; bottom:-1px; height:2px; background:var(--lime); }
     .filter-active { color:var(--lime)!important; }
     .bookmark-btn.saved { color:var(--lime); background:#202c16; border-radius:4px; }
     .trader-card.is-hidden, .news-card.is-hidden, .side-feed-card.is-hidden { display:none; }
@@ -739,6 +743,7 @@
     detailFeedList?.insertAdjacentHTML('afterend', '<button class="detail-feed-more" id="openFeedModal">查看更多信息流</button>');
     const fullFeedList = $('#fullFeedList');
     if(fullFeedList && detailFeedList) fullFeedList.innerHTML = detailFeedList.innerHTML;
+    $$('#traderFeedSection .tradeAction, #feedModal .tradeAction').forEach(button => button.remove());
     renderIcons();
     $$('.news-market .token-icon, .side-market .token-icon').forEach(icon => {
       const symbol = icon.textContent.trim().toLowerCase();
@@ -842,7 +847,7 @@
     const positions = `<div class="detail-position"><div class="dp-top"><strong>ETH / USDC <span class="side-badge">多 20x</span></strong><span class="change">+$42,840</span></div><div class="dp-grid"><div><small>仓位价值</small><b>$418,200</b></div><div><small>开仓均价</small><b>$3,521.8</b></div><div><small>标记价格</small><b>$3,684.2</b></div><div><small>强平价格</small><b>$3,218.6</b></div></div></div><div class="detail-position"><div class="dp-top"><strong>BTC / USDC <span class="side-badge">多 8x</span></strong><span class="change">+$18,290</span></div><div class="dp-grid"><div><small>仓位价值</small><b>$285,100</b></div><div><small>开仓均价</small><b>$65,772</b></div><div><small>标记价格</small><b>$68,942</b></div><div><small>强平价格</small><b>$58,640</b></div></div></div><div class="detail-position"><div class="dp-top"><strong>ARB / USDC <span class="side-badge" style="color:var(--red);background:rgba(255,111,117,.1)">空 5x</span></strong><span class="change down">-$3,410</span></div><div class="dp-grid"><div><small>仓位价值</small><b>$94,800</b></div><div><small>开仓均价</small><b>$1.142</b></div><div><small>标记价格</small><b>$1.183</b></div><div><small>强平价格</small><b>$1.368</b></div></div></div>`;
     const history = `<div class="detail-position"><div class="dp-top"><strong>SOL / USDC · 多</strong><span class="change">+$12,480</span></div><div class="dp-grid"><div><small>开仓</small><b>$162.40</b></div><div><small>平仓</small><b>$178.62</b></div><div><small>持仓时间</small><b>3天 8时</b></div><div><small>ROI</small><b style="color:var(--green)">+49.9%</b></div></div></div><div class="detail-position"><div class="dp-top"><strong>BTC / USDC · 空</strong><span class="change">+$8,920</span></div><div class="dp-grid"><div><small>开仓</small><b>$71,240</b></div><div><small>平仓</small><b>$69,870</b></div><div><small>持仓时间</small><b>18时 22分</b></div><div><small>ROI</small><b style="color:var(--green)">+15.4%</b></div></div></div>`;
     $('#detailContent').innerHTML = positions;
-    function showDetail(){ Object.values(views).forEach(v => v.classList.remove('active')); views.detail.classList.add('active'); window.scrollTo({top:0,behavior:'smooth'}); }
+    function showDetail(){ Object.values(views).forEach(v => v.classList.remove('active')); views.detail.classList.add('active'); showDetailPanel('performanceSection'); window.scrollTo({top:0,behavior:'smooth'}); }
     $$('.openTrader').forEach(el => el.addEventListener('click', e => { if(e.target.closest('button')) return; showDetail(); }));
     $$('.detailBack').forEach(btn => btn.addEventListener('click', () => $('.nav-btn[data-view="market"]').click()));
     $('#closeDrawer').addEventListener('click', () => drawerMask.classList.remove('open'));
@@ -1051,6 +1056,18 @@
           <tr><td><div class="position-trader"><span class="avatar gold">鲸</span><span><strong>鲸落</strong><small>0x63C9...7F12</small></span></div></td><td>ETHUSDC</td><td class="status-live">多</td><td>760.00 USDC</td><td>3,492.10</td><td>3,438.60</td><td style="color:var(--red)">−38.40</td><td>10-14 09:20 / 10-15 18:36</td></tr>
         </tbody></table></div>
       </section>`);
+    if(copyAccountPanel) copyAccountPanel.id = 'copyAccountsPanel';
+    copyAccountPanel?.insertAdjacentHTML('beforebegin', '<nav class="manage-data-tabs"><button class="manage-data-tab active" data-manage-panel="copyAccountsPanel">我跟单的账户</button><button class="manage-data-tab" data-manage-panel="copyPositionsPanel">跟单仓位</button><button class="manage-data-tab" data-manage-panel="subscriptionAccountsPanel">订阅账户</button></nav>');
+    const managePanelIds = ['copyAccountsPanel','copyPositionsPanel','subscriptionAccountsPanel'];
+    function showManagePanel(target){
+      $$('.manage-data-tab').forEach(tab => tab.classList.toggle('active', tab.dataset.managePanel === target));
+      managePanelIds.forEach(id => {
+        const panel = document.getElementById(id);
+        if(panel) panel.hidden = id !== target;
+      });
+    }
+    showManagePanel('copyAccountsPanel');
+    $$('.manage-data-tab').forEach(tab => tab.addEventListener('click', () => showManagePanel(tab.dataset.managePanel)));
     $$('#copyPositionsPanel th').forEach(th => {
       if(['未实现盈亏','已实现盈亏'].includes(th.textContent.trim())) th.textContent += '（USDC）';
     });
@@ -1136,10 +1153,18 @@
       $$('.detail-period-bar button').forEach(b => b.classList.toggle('active', b === btn));
       toast(`已切换至${btn.textContent}数据`);
     }));
-    $$('.detail-page-tab').forEach(btn => btn.addEventListener('click', () => {
-      $$('.detail-page-tab').forEach(b => b.classList.toggle('active', b === btn));
-      document.getElementById(btn.dataset.target)?.scrollIntoView({ behavior:'smooth', block:'start' });
-    }));
+    const detailPanelIds = ['performanceSection','traderFeedSection','positionsSection','historySection','followersSection'];
+    function showDetailPanel(target){
+      $$('.detail-page-tab').forEach(btn => btn.classList.toggle('active', btn.dataset.target === target));
+      detailPanelIds.forEach(id => {
+        const panel = document.getElementById(id);
+        if(panel) panel.hidden = id !== target;
+      });
+      const periodBar = $('.detail-period-bar');
+      if(periodBar) periodBar.hidden = target !== 'performanceSection';
+    }
+    showDetailPanel('performanceSection');
+    $$('.detail-page-tab').forEach(btn => btn.addEventListener('click', () => showDetailPanel(btn.dataset.target)));
     const feedModal = $('#feedModal');
     $('#openFeedModal')?.addEventListener('click', () => feedModal.classList.add('open'));
     $('#closeFeedModal')?.addEventListener('click', () => feedModal.classList.remove('open'));
