@@ -1,0 +1,724 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>edgeX Signal - 链上跟单情报终端</title>
+  <script src="https://unpkg.com/lucide@0.468.0/dist/umd/lucide.min.js"></script>
+  <style>
+    :root {
+      --bg: #080b0d;
+      --surface: #101417;
+      --surface-2: #151a1e;
+      --surface-3: #1a2024;
+      --line: #252c30;
+      --text: #f1f4f2;
+      --muted: #899499;
+      --soft: #bcc4c1;
+      --lime: #22FD73;
+      --lime-dark: #18c95a;
+      --green: #4ddf99;
+      --red: #ff6f75;
+      --amber: #ffbd5c;
+      --blue: #6db7ff;
+      --radius: 6px;
+    }
+    * { box-sizing: border-box; }
+    html { background: var(--bg); color-scheme: dark; }
+    body { margin: 0; background: var(--bg); color: var(--text); font-family: Inter, "SF Pro Text", "PingFang SC", system-ui, sans-serif; font-size: 14px; letter-spacing: 0; }
+    button, input, select { font: inherit; letter-spacing: 0; }
+    button { color: inherit; }
+    .app { min-height: 100vh; }
+    .topbar { height:72px; padding:0 28px; border-bottom:1px solid var(--line); display:flex; align-items:center; gap:38px; position:sticky; top:0; z-index:30; background:rgba(17,22,25,.98); backdrop-filter:blur(12px); }
+    .brand { display:flex; align-items:center; gap:0; font-weight:800; font-style:italic; font-size:28px; white-space:nowrap; }
+    .brand-mark { display:none; }
+    .brand span:last-child { display:none; }
+    .main-nav { display: flex; height: 100%; align-items: center; gap: 4px; }
+    .nav-btn { height: 100%; padding: 0 16px; border: 0; background: transparent; color: var(--muted); position: relative; cursor: pointer; }
+    .nav-btn:hover { color: var(--text); }
+    .nav-btn.active { color: var(--text); }
+    .nav-btn.active::after { content:""; position: absolute; height: 2px; left: 16px; right: 16px; bottom: 0; background: var(--lime); }
+    .top-actions { margin-left: auto; display: flex; align-items: center; gap: 9px; }
+    .gas { color: var(--muted); font-size: 12px; display: flex; align-items: center; gap: 6px; }
+    .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--green); box-shadow: 0 0 8px var(--green); }
+    .icon-btn { width: 36px; height: 36px; border: 1px solid var(--line); background: var(--surface); display: grid; place-items: center; cursor: pointer; border-radius: var(--radius); }
+    .icon-btn:hover { border-color: #3a454a; background: var(--surface-2); }
+    .icon-btn i { width: 17px; height: 17px; }
+    .wallet { height: 36px; padding: 0 13px; border: 1px solid #3b4d29; background: #182112; color: var(--lime); cursor: pointer; border-radius: var(--radius); }
+    .workspace { max-width:none; margin:0; padding:0; }
+    .view { display: none; }
+    .view.active { display: block; }
+    .terminal-grid { display: grid; grid-template-columns: 226px minmax(440px, 1fr) 316px; gap: 14px; align-items: start; }
+    .panel { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }
+    .panel-head { min-height: 47px; display: flex; align-items: center; justify-content: space-between; padding: 0 14px; border-bottom: 1px solid var(--line); }
+    .panel-title { font-size: 13px; font-weight: 600; }
+    .panel-link { border: 0; background: none; color: var(--muted); font-size: 12px; cursor: pointer; }
+    .panel-link:hover { color: var(--lime); }
+    .signal-summary { padding: 14px; border-bottom: 1px solid var(--line); }
+    .summary-label { color: var(--muted); font-size: 12px; margin-bottom: 6px; }
+    .summary-value { font-size: 25px; font-weight: 600; font-variant-numeric: tabular-nums; }
+    .summary-value span { font-size: 12px; color: var(--green); font-weight: 500; margin-left: 6px; }
+    .mini-bars { display: flex; height: 28px; gap: 3px; align-items: end; margin-top: 13px; }
+    .mini-bars b { flex: 1; background: #35432d; border-radius: 2px 2px 0 0; }
+    .mini-bars b.hot { background: var(--lime); }
+    .watch-list { padding: 7px; }
+    .watch-item { width: 100%; display: grid; grid-template-columns: 30px 1fr auto; gap: 9px; align-items: center; padding: 9px 7px; border: 0; background: transparent; text-align: left; cursor: pointer; border-radius: 4px; }
+    .watch-item:hover, .watch-item.active { background: var(--surface-3); }
+    .avatar { width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; font-size: 11px; font-weight: 700; background: #2a3236; color: var(--soft); overflow: hidden; flex: 0 0 auto; }
+    .avatar.green { background: #25351e; color: var(--lime); }
+    .avatar.blue { background: #1c3041; color: var(--blue); }
+    .avatar.gold { background: #3a2d19; color: var(--amber); }
+    .who { min-width: 0; }
+    .who strong { display: block; font-size: 12px; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .who small { display: block; color: var(--muted); font-size: 11px; margin-top: 2px; }
+    .change { font-size: 11px; color: var(--green); font-variant-numeric: tabular-nums; }
+    .change.down { color: var(--red); }
+    .feed-tabs { display: flex; gap: 2px; }
+    .feed-tab { padding: 7px 13px; border: 0; border-radius: 4px; background: transparent; color: var(--muted); cursor: pointer; font-size: 12px; }
+    .feed-tab.active { background: var(--surface-3); color: var(--text); }
+    .feed { min-height: 700px; }
+    .feed-item { padding: 16px; border-bottom: 1px solid var(--line); transition: background .15s; }
+    .feed-item:hover { background: #12171a; }
+    .feed-meta { display: flex; align-items: center; gap: 10px; }
+    .feed-source { min-width: 0; }
+    .feed-source strong { font-size: 13px; font-weight: 600; }
+    .verified { color: var(--blue); margin-left: 3px; }
+    .feed-source span { color: var(--muted); font-size: 12px; margin-left: 5px; }
+    .feed-time { margin-left: auto; color: var(--muted); font-size: 11px; white-space: nowrap; }
+    .source-tag { padding: 3px 6px; border-radius: 3px; background: #242b2e; color: var(--soft); font-size: 10px; }
+    .source-tag.trade { color: var(--lime); background: #1f2918; }
+    .feed-body { margin: 11px 0 12px 40px; color: #d9dedc; line-height: 1.62; }
+    .feed-body strong { color: var(--text); }
+    .quote { margin-top: 10px; border-left: 2px solid #394247; padding: 8px 10px; background: #0d1113; color: var(--soft); font-size: 12px; }
+    .pair-action { margin-left: 40px; display: flex; align-items: center; gap: 9px; padding: 9px 10px; border: 1px solid var(--line); background: #0d1113; border-radius: 4px; }
+    .token-icon { width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; background: #282f33; font-size: 10px; font-weight: 700; }
+    .pair-main { flex: 1; min-width: 0; }
+    .pair-main strong { font-size: 12px; }
+    .pair-main span { color: var(--muted); font-size: 11px; margin-left: 7px; }
+    .pair-price { text-align: right; font-size: 12px; font-variant-numeric: tabular-nums; }
+    .pair-price small { display: block; color: var(--green); font-size: 10px; margin-top: 2px; }
+    .trade-btn, .primary-btn { background: var(--lime); color: #0b1009; border: 0; font-weight: 650; border-radius: 4px; cursor: pointer; }
+    .trade-btn { height: 30px; padding: 0 12px; font-size: 11px; }
+    .trade-btn:hover, .primary-btn:hover { background: #55ff91; }
+    .feed-actions { margin: 10px 0 0 40px; display: flex; gap: 18px; color: var(--muted); }
+    .quiet-action { border: 0; background: transparent; color: inherit; display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 11px; }
+    .quiet-action:hover { color: var(--text); }
+    .quiet-action i { width: 14px; height: 14px; }
+    .leader-card { padding: 13px 14px; border-bottom: 1px solid var(--line); cursor: pointer; }
+    .leader-card:hover { background: var(--surface-2); }
+    .leader-top { display: flex; gap: 9px; align-items: center; }
+    .rank { width: 17px; color: var(--muted); font-size: 11px; }
+    .leader-name { flex: 1; min-width: 0; }
+    .leader-name strong { display: flex; align-items: center; gap: 5px; font-size: 12px; }
+    .leader-name small { color: var(--muted); font-size: 10px; font-family: ui-monospace, monospace; }
+    .badge { font-size: 9px; padding: 2px 4px; border-radius: 3px; color: var(--lime); background: #222e1a; }
+    .badge.unverified { color:var(--muted); background:var(--surface-3); }
+    .leader-metrics { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; margin: 10px 0 7px 26px; }
+    .metric small { color: var(--muted); font-size: 9px; display: block; }
+    .metric b { font-size: 11px; font-weight: 500; font-variant-numeric: tabular-nums; }
+    .metric b.pos { color: var(--green); }
+    .spark { margin-left: 26px; width: calc(100% - 26px); height: 34px; display: block; }
+    .spark path.line { stroke: var(--green); fill: none; stroke-width: 1.6; }
+    .spark path.area { fill: rgba(77,223,153,.08); }
+    .ticker { margin-top: 14px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }
+    .ticker-item { background: var(--surface); padding: 10px 13px; display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+    .ticker-item span { color: var(--muted); font-size: 11px; }
+    .ticker-item b { font-size: 12px; font-weight: 500; }
+    .ticker-item em { font-style: normal; font-size: 11px; color: var(--green); }
+    .page-head { display: flex; justify-content: space-between; align-items: end; margin: 8px 0 18px; }
+    .page-head h1 { font-size: 23px; margin: 0 0 6px; font-weight: 600; }
+    .page-head p { margin: 0; color: var(--muted); font-size: 12px; }
+    .control-row { display: flex; gap: 8px; }
+    .select, .search { height: 34px; border: 1px solid var(--line); background: var(--surface); color: var(--soft); border-radius: 4px; padding: 0 10px; outline: none; }
+    .search { width: 210px; }
+    .market-layout { display: grid; grid-template-columns: 1fr; gap: 14px; }
+    .leader-grid-head { min-height:47px; display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; }
+    .leader-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:14px; }
+    .trader-card { min-width:0; padding:20px; background:var(--surface); border:1px solid var(--line); border-radius:8px; cursor:pointer; transition:border-color .15s, background .15s, transform .15s; }
+    .trader-card:hover { background:var(--surface-2); border-color:#3b464b; transform:translateY(-1px); }
+    .trader-card-top { display:flex; align-items:center; gap:10px; }
+    .trader-card-top .trader-cell { flex:1; min-width:0; }
+    .trader-card .avatar { width:42px; height:42px; border:1px solid currentColor; }
+    .trader-card .info strong { font-size:15px; }
+    .trader-card .info small { display:block; margin-top:4px; }
+    .bookmark-btn { width:28px; height:28px; border:0; background:transparent; color:var(--muted); display:grid; place-items:center; cursor:pointer; }
+    .bookmark-btn:hover { color:var(--lime); }
+    .bookmark-btn i { width:16px; height:16px; }
+    .card-address { display:flex; align-items:center; gap:6px; margin-top:14px; color:var(--soft); font-family:ui-monospace,monospace; font-size:11px; }
+    .card-address i { width:12px; height:12px; }
+    .card-address span { color:var(--muted); font-family:Inter,"PingFang SC",sans-serif; font-size:10px; }
+    .return-block { display:grid; grid-template-columns:1fr 108px; align-items:center; gap:12px; padding:14px 0; }
+    .return-label { color:var(--soft); font-size:11px; }
+    .return-value { color:var(--lime); font-size:25px; font-weight:600; margin-top:3px; font-variant-numeric:tabular-nums; }
+    .return-block .card-chart { border:0; padding:0; height:52px; }
+    .card-stats { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; padding:0 0 16px; }
+    .card-stat small { display:block; color:var(--muted); font-size:9px; margin-bottom:4px; }
+    .card-stat b { display:block; font-size:12px; font-weight:500; font-variant-numeric:tabular-nums; white-space:nowrap; }
+    .copy-scale { display:flex; justify-content:space-between; gap:12px; padding:13px 0; border-top:1px solid var(--line); color:var(--soft); font-size:11px; }
+    .detail-link { color:var(--lime); }
+    .card-actions { display:flex; gap:7px; }
+    .card-actions .secondary-btn { height:30px; padding:0 12px; font-size:11px; }
+    .card-actions .quiet-action { padding:0 9px; color:var(--text); }
+    .card-chart { height:52px; padding-top:9px; border-top:1px solid var(--line); }
+    .card-chart svg { width:100%; height:100%; display:block; }
+    .card-chart polyline { fill:none; stroke:var(--green); stroke-width:1.6; vector-effect:non-scaling-stroke; }
+    .card-chart path { fill:rgba(77,223,153,.06); }
+    .trader-cell { display: flex; align-items: center; gap: 10px; }
+    .trader-cell .info strong { display: block; font-weight: 500; }
+    .trader-cell .info small { color: var(--muted); font-family: ui-monospace, monospace; }
+    .mini-spark { width: 72px; height: 24px; }
+    .mini-spark polyline { fill: none; stroke: var(--green); stroke-width: 1.5; }
+    .side-note { padding:14px; display:grid; grid-template-columns:auto repeat(3,1fr) 1.4fr; gap:16px; align-items:center; }
+    .side-note h3 { margin:0; font-size:13px; }
+    .rule { display:flex; gap:10px; padding:0; border-bottom:0; }
+    .rule-num { width: 22px; height: 22px; background: var(--surface-3); color: var(--lime); display: grid; place-items: center; border-radius: 4px; font-size: 10px; }
+    .rule p { margin: 0; color: var(--soft); font-size: 11px; line-height: 1.5; }
+    .rule p span { display: block; color: var(--muted); margin-top: 2px; }
+    .manage-grid { display: grid; grid-template-columns: 1.35fr .65fr; gap: 14px; }
+    .account-summary { display: grid; grid-template-columns: repeat(4,1fr); border-bottom: 1px solid var(--line); }
+    .account-stat { padding: 15px; border-right: 1px solid var(--line); }
+    .account-stat:last-child { border-right: 0; }
+    .account-stat small { color: var(--muted); font-size: 10px; display: block; }
+    .account-stat b { display: block; font-size: 17px; margin-top: 6px; font-weight: 550; }
+    .position-row { display: grid; grid-template-columns: 1.3fr .7fr .7fr .7fr auto; gap: 10px; padding: 13px 15px; align-items: center; border-bottom: 1px solid var(--line); }
+    .position-row.head { color: var(--muted); font-size: 10px; text-transform: uppercase; }
+    .position-row strong { font-size: 12px; }
+    .side-badge { font-size: 9px; padding: 2px 5px; color: var(--green); background: rgba(77,223,153,.1); margin-left: 5px; }
+    .danger-link { color: var(--red); border: 0; background: none; cursor: pointer; font-size: 11px; }
+    .subscription { padding: 13px 14px; border-bottom: 1px solid var(--line); display: flex; align-items: center; gap: 10px; }
+    .subscription .who { flex: 1; }
+    .toggle { width: 34px; height: 19px; border-radius: 10px; border: 0; background: #3a4246; position: relative; cursor: pointer; }
+    .toggle::after { content:""; width: 15px; height: 15px; border-radius: 50%; position: absolute; top: 2px; left: 2px; background: #cad0cd; transition: .2s; }
+    .toggle.on { background: var(--lime-dark); }
+    .toggle.on::after { left: 17px; background: #0a0d09; }
+    .drawer-mask { display:none; position: fixed; inset: 0; z-index: 50; background: rgba(0,0,0,.55); opacity: 0; pointer-events: none; transition: .2s; }
+    .drawer-mask.open { opacity: 1; pointer-events: auto; }
+    .drawer { position: absolute; right: 0; top: 0; bottom: 0; width: min(540px, 100%); background: var(--bg); border-left: 1px solid var(--line); transform: translateX(100%); transition: .25s ease; overflow: auto; }
+    .drawer-mask.open .drawer { transform: translateX(0); }
+    .drawer-head { padding: 18px; display: flex; align-items: center; gap: 12px; border-bottom: 1px solid var(--line); position: sticky; top: 0; background: var(--bg); z-index: 2; }
+    .drawer-title { flex: 1; }
+    .drawer-title h2 { font-size: 16px; margin: 0 0 3px; }
+    .drawer-title p { font-family: ui-monospace, monospace; color: var(--muted); margin: 0; font-size: 10px; }
+    .verify-row { display: flex; gap: 6px; margin-top: 5px; }
+    .verify-row span { font-size: 9px; color: var(--lime); border: 1px solid #3a4c2a; padding: 2px 5px; border-radius: 3px; }
+    .detail-actions { padding: 12px 18px; display: grid; grid-template-columns: 1fr 1fr auto; gap: 8px; border-bottom: 1px solid var(--line); }
+    .primary-btn, .secondary-btn { height: 36px; padding: 0 13px; }
+    .secondary-btn { border: 1px solid var(--line); background: var(--surface); border-radius: 4px; cursor: pointer; }
+    .detail-stats { display: grid; grid-template-columns: repeat(4, 1fr); border-bottom: 1px solid var(--line); }
+    .detail-stat { padding: 14px; border-right: 1px solid var(--line); }
+    .detail-stat:last-child { border: 0; }
+    .detail-stat small { color: var(--muted); font-size: 9px; display: block; }
+    .detail-stat b { font-size: 14px; margin-top: 5px; display: block; }
+    .detail-chart { height: 145px; padding: 14px 18px; border-bottom: 1px solid var(--line); }
+    .detail-chart svg { width: 100%; height: 100%; }
+    .detail-tabs { padding: 0 18px; display: flex; gap: 22px; border-bottom: 1px solid var(--line); }
+    .detail-tab { padding: 13px 0; background: none; border: 0; color: var(--muted); cursor: pointer; position: relative; }
+    .detail-tab.active { color: var(--text); }
+    .detail-tab.active::after { content:""; position:absolute; bottom:0; left:0; right:0; height:2px; background:var(--lime); }
+    .detail-content { padding: 14px 18px; }
+    .detail-position { background: var(--surface); border: 1px solid var(--line); border-radius: 4px; padding: 12px; margin-bottom: 9px; }
+    .dp-top { display:flex; align-items:center; gap:7px; }
+    .dp-top strong { flex:1; }
+    .dp-grid { display:grid; grid-template-columns:repeat(4,1fr); margin-top:12px; gap:8px; }
+    .dp-grid small { color:var(--muted); font-size:9px; display:block; }
+    .dp-grid b { font-size:11px; margin-top:3px; display:block; }
+    .modal-mask { position: fixed; inset: 0; z-index: 80; background: rgba(0,0,0,.68); display: none; place-items: center; padding: 16px; }
+    .modal-mask.open { display: grid; }
+    .modal { width: min(430px,100%); background: var(--surface); border: 1px solid #394247; border-radius: 7px; box-shadow: 0 24px 80px rgba(0,0,0,.55); }
+    .modal-head { padding: 15px 17px; display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid var(--line); }
+    .modal-head h3 { margin:0; font-size:14px; }
+    .modal-body { padding:17px; }
+    .mode-switch { display:grid; grid-template-columns:1fr 1fr; background:var(--bg); padding:3px; border-radius:4px; margin-bottom:15px; }
+    .mode-btn { height:32px; border:0; background:transparent; color:var(--muted); border-radius:3px; cursor:pointer; }
+    .mode-btn.active { background:var(--surface-3); color:var(--text); }
+    .field { margin-bottom:14px; }
+    .field label { display:flex; justify-content:space-between; color:var(--soft); font-size:11px; margin-bottom:7px; }
+    .field label span { color:var(--muted); }
+    .field input { width:100%; height:38px; background:var(--bg); border:1px solid var(--line); color:var(--text); padding:0 11px; border-radius:4px; outline:none; }
+    .field input:focus { border-color:var(--lime-dark); }
+    .risk-note { color:var(--muted); font-size:10px; line-height:1.5; padding:10px; background:var(--bg); margin-bottom:14px; }
+    .modal-footer { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+    .toast { position:fixed; z-index:100; bottom:22px; left:50%; transform:translate(-50%,16px); opacity:0; background:#e6fbd0; color:#11170d; padding:10px 14px; border-radius:4px; pointer-events:none; transition:.2s; font-weight:600; font-size:12px; }
+    .toast.show { opacity:1; transform:translate(-50%,0); }
+    #market-view.active { display:grid; grid-template-columns:320px minmax(0,1fr); align-items:start; }
+    .figma-feed { grid-column:1; grid-row:1 / span 2; min-height:calc(100vh - 72px); padding:20px 14px 28px; background:var(--surface); border-right:1px solid var(--line); }
+    .feed-expand { display:none; position:absolute; left:12px; top:20px; z-index:2; }
+    #market-view { position:relative; }
+    #market-view.feed-collapsed { grid-template-columns:1fr; }
+    #market-view.feed-collapsed .figma-feed { display:none; }
+    #market-view.feed-collapsed .feed-expand { display:grid; }
+    #market-view.feed-collapsed > .page-head, #market-view.feed-collapsed > .market-layout { grid-column:1; }
+    #market-view.feed-collapsed > .page-head { padding-left:64px; }
+    .figma-feed-inner { padding:12px; background:var(--surface-2); border-radius:6px; }
+    .figma-feed-head, .figma-feed-switch, .figma-feed-filter { display:flex; align-items:center; justify-content:space-between; gap:8px; }
+    .figma-feed-head { margin-bottom:12px; }
+    .figma-feed-head strong { font-size:13px; }
+    .figma-feed-switch { padding:4px; background:var(--surface); border-radius:6px; margin-bottom:12px; }
+    .figma-feed-switch button { flex:1; height:30px; border:0; background:transparent; color:var(--text); border-radius:4px; font-size:11px; cursor:pointer; }
+    .figma-feed-switch button.active { background:var(--lime); color:#090c0e; font-weight:650; }
+    .figma-feed-filter { color:var(--muted); font-size:10px; margin-bottom:10px; }
+    .figma-feed-filter b { color:var(--lime); font-weight:500; }
+    .side-feed-card { padding:12px; margin-top:10px; border:1px solid var(--line); background:var(--surface); border-radius:6px; }
+    .side-feed-author { display:flex; align-items:center; gap:8px; }
+    .side-feed-author .avatar { width:28px; height:28px; }
+    .side-feed-author .who { flex:1; }
+    .side-feed-card p { margin:10px 0; color:var(--soft); font-size:11px; line-height:1.55; }
+    .side-market { padding:8px; background:var(--surface-2); border-radius:4px; }
+    .side-market-line { display:flex; gap:9px; align-items:center; font-size:11px; }
+    .side-market-line b { flex:1; }
+    .side-market-line em { color:var(--lime); font-style:normal; font-size:10px; }
+    .side-market button { margin-top:5px; height:24px; padding:0 10px; border:1px solid var(--line); background:transparent; border-radius:4px; font-size:10px; cursor:pointer; }
+    .related-card { margin-top:10px; padding:12px; background:var(--surface); border:1px solid var(--line); border-radius:6px; }
+    .related-card b { color:var(--lime); font-size:10px; }
+    .related-card strong { display:block; margin:10px 0 6px; font-size:11px; }
+    .related-card p { margin:0; color:var(--muted); font-size:10px; line-height:1.5; }
+    #market-view > .page-head { grid-column:2; margin:0; padding:28px 32px 16px; align-items:center; }
+    .my-copy-module { min-width:280px; padding:12px 14px; background:var(--surface); border:1px solid var(--line); border-radius:6px; }
+    .my-copy-module-head { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:9px; }
+    .my-copy-module-head strong { font-size:12px; }
+    .my-copy-module-head span { color:var(--muted); font-size:10px; }
+    .my-copy-module-body { display:flex; align-items:end; justify-content:space-between; gap:16px; }
+    .my-copy-equity small { display:block; color:var(--muted); font-size:9px; margin-bottom:3px; }
+    .my-copy-equity b { font-size:18px; font-variant-numeric:tabular-nums; }
+    .my-copy-module .overview-actions { margin:0; }
+    #market-view > .market-layout { grid-column:2; padding:0 32px 30px; }
+    .market-subnav { display:flex; gap:24px; align-items:center; margin-top:18px; }
+    .market-subnav button { border:0; background:transparent; color:var(--muted); padding:0 0 8px; cursor:pointer; }
+    .market-subnav button.active { color:var(--text); border-bottom:2px solid var(--lime); }
+    .pagination { display:flex; justify-content:space-between; align-items:center; margin-top:16px; color:var(--muted); font-size:10px; }
+    .page-buttons { display:flex; gap:8px; }
+    .page-buttons button { height:30px; min-width:30px; padding:0 10px; border:1px solid var(--line); background:var(--surface-2); border-radius:4px; cursor:pointer; }
+    .page-buttons button.active { color:var(--lime); background:#202c16; }
+    #intel-view.active, #manage-view.active, #detail-view.active { display:block; }
+    #intel-view > .terminal-grid, #intel-view > .ticker, #manage-view > .page-head, #manage-view > .manage-grid { display:none; }
+    .view-shell { display:grid; grid-template-columns:184px minmax(0,1fr); min-height:calc(100vh - 72px); }
+    .work-rail { padding:28px 14px; background:var(--surface); border-right:1px solid var(--line); }
+    .rail-label { color:var(--muted); font-size:10px; margin-bottom:7px; }
+    .rail-item { height:44px; display:flex; align-items:center; gap:10px; padding:0 12px; color:var(--soft); border-radius:4px; font-size:13px; }
+    .rail-item.active { color:var(--lime); background:#202c16; font-weight:600; }
+    .rail-item i { width:17px; height:17px; }
+    .rail-sep { height:1px; background:var(--line); margin:26px 0; }
+    .rail-account { margin-top:26px; padding:12px; background:var(--surface-2); border-radius:6px; }
+    .rail-account small { color:var(--muted); font-size:10px; }
+    .rail-account b { display:block; margin:8px 0 3px; font-size:17px; }
+    .rail-account button { margin-top:10px; height:30px; border:1px solid var(--line); background:transparent; border-radius:4px; padding:0 12px; font-size:11px; }
+    .view-main { padding:32px; min-width:0; }
+    .view-title h1 { margin:0 0 8px; font-size:28px; }
+    .view-title p { margin:0; color:var(--muted); font-size:13px; }
+    .scope-switch { display:flex; align-items:center; gap:12px; margin:24px 0; }
+    .segmented { display:flex; padding:4px; background:var(--surface-2); border-radius:6px; }
+    .segmented button { height:38px; padding:0 18px; border:0; background:transparent; border-radius:4px; cursor:pointer; }
+    .segmented button.active { background:var(--lime); color:#090c0e; font-weight:650; }
+    .scope-note { color:var(--muted); font-size:11px; }
+    .discovery-columns { display:grid; grid-template-columns:minmax(0,1fr) 310px; gap:24px; align-items:start; }
+    .discovery-feed { display:flex; flex-direction:column; gap:12px; }
+    .discovery-filter { display:flex; gap:18px; align-items:center; color:var(--muted); font-size:12px; margin-bottom:2px; }
+    .discovery-filter b { color:var(--lime); font-size:11px; }
+    .news-card { padding:20px; background:var(--surface); border:1px solid var(--line); border-radius:8px; }
+    .news-author { display:flex; align-items:center; gap:11px; }
+    .news-author .who { flex:1; }
+    .news-card > p { margin:16px 0; color:var(--soft); line-height:1.65; }
+    .news-market { display:flex; align-items:center; gap:14px; padding:12px; background:var(--surface-2); border-radius:4px; }
+    .news-market b { font-size:12px; }.news-market span { font-size:12px; }.news-market em { color:var(--lime); font-size:10px; font-style:normal; }
+    .news-market button { margin-left:auto; height:28px; border:1px solid var(--line); background:transparent; border-radius:4px; padding:0 11px; font-size:11px; }
+    .news-actions { display:flex; gap:18px; color:var(--muted); font-size:10px; margin-top:12px; }
+    .related-panel, .market-panel { padding:16px; background:var(--surface); border:1px solid var(--line); border-radius:8px; margin-bottom:14px; }
+    .side-panel-head { display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; }.side-panel-head b { font-size:14px; }.side-panel-head span { color:var(--lime); font-size:10px; }
+    .activity { padding:13px 0; border-bottom:1px solid var(--line); }.activity:last-child { border:0; }.activity small { color:var(--muted); }.activity strong { display:block; margin:6px 0; font-size:12px; }.activity a { color:var(--lime); font-size:10px; }
+    .market-row { display:grid; grid-template-columns:24px 1fr auto; gap:8px; padding:8px 0; align-items:center; font-size:11px; }.market-row em { color:var(--lime); font-style:normal; }
+    .manage-head { display:flex; align-items:center; justify-content:space-between; }
+    .identity-strip { display:flex; align-items:center; gap:12px; padding:14px 16px; margin:20px 0 16px; border:1px solid var(--line); background:var(--surface); border-radius:6px; }
+    .identity-strip strong { font-size:12px; }.identity-strip span { color:var(--muted); font-size:10px; }.identity-strip a { margin-left:auto; color:var(--lime); font-size:10px; }
+    .overview-grid { display:grid; grid-template-columns:repeat(4,1fr); background:var(--surface); border:1px solid var(--line); border-radius:6px; margin-bottom:16px; }
+    .overview-stat { padding:20px; }.overview-stat small { color:var(--muted); font-size:10px; }.overview-stat b { display:block; margin:8px 0; font-size:22px; }.overview-stat span { color:var(--muted); font-size:9px; }
+    .overview-actions { display:flex; gap:6px; margin-top:12px; }
+    .overview-actions button { height:28px; padding:0 12px; font-size:10px; }
+    .detail-breadcrumb { display:flex; align-items:center; gap:8px; color:var(--muted); font-size:11px; margin-bottom:22px; }
+    .detail-breadcrumb button { border:0; background:transparent; color:var(--soft); padding:0; cursor:pointer; }
+    .detail-profile { display:flex; align-items:flex-start; gap:16px; padding-bottom:22px; }
+    .detail-profile .avatar { width:64px; height:64px; font-size:20px; }
+    .detail-profile-main { flex:1; min-width:0; }
+    .detail-profile-main h1 { margin:0 0 7px; font-size:24px; display:flex; align-items:center; gap:8px; }
+    .detail-profile-main p { margin:8px 0 0; color:var(--muted); font-size:11px; line-height:1.6; }
+    .profile-meta { display:flex; flex-wrap:wrap; gap:12px; color:var(--soft); font-size:11px; }
+    .profile-actions { display:flex; gap:8px; }
+    .detail-kpis { display:grid; grid-template-columns:repeat(4,1fr); border:1px solid var(--line); background:var(--surface); border-radius:6px; margin-bottom:16px; }
+    .detail-kpi { padding:18px; border-right:1px solid var(--line); }
+    .detail-kpi:last-child { border:0; }.detail-kpi small { color:var(--muted); font-size:10px; }.detail-kpi b { display:block; margin-top:8px; font-size:20px; }
+    .detail-overview { display:grid; grid-template-columns:minmax(0,1fr) 300px; gap:16px; margin-bottom:16px; }
+    .performance-panel, .copy-panel { background:var(--surface); border:1px solid var(--line); border-radius:6px; padding:20px; }
+    .performance-head { display:flex; justify-content:space-between; align-items:center; }.performance-head h2,.copy-panel h2 { margin:0; font-size:15px; }
+    .period-tabs { display:flex; gap:5px; }.period-tabs button { height:27px; border:0; background:transparent; color:var(--muted); border-radius:3px; font-size:10px; }.period-tabs button.active { background:var(--surface-3); color:var(--lime); }
+    .performance-chart { height:230px; margin-top:15px; }.performance-chart svg { width:100%; height:100%; display:block; }
+    .copy-setting { display:flex; justify-content:space-between; padding:13px 0; border-bottom:1px solid var(--line); font-size:11px; }.copy-setting span { color:var(--muted); }.copy-setting b { font-weight:500; }
+    .copy-panel .card-actions { margin-top:18px; display:grid; grid-template-columns:1fr 1fr; }.copy-panel .card-actions button { height:38px; }
+    .detail-section { padding:20px; background:var(--surface); border:1px solid var(--line); border-radius:6px; margin-bottom:16px; }.detail-section h2 { margin:0 0 16px; font-size:15px; }
+    .data-panel { padding:20px; background:var(--surface); border:1px solid var(--line); border-radius:6px; margin-bottom:16px; }
+    .data-panel-head { display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; }.data-panel-head h2 { margin:0; font-size:15px; }.data-panel-head .control-row { flex-wrap:wrap; }
+    .data-table { width:100%; border-collapse:collapse; }.data-table th,.data-table td { padding:12px; text-align:left; border-bottom:1px solid var(--line); font-size:11px; white-space:nowrap; }.data-table th { color:var(--muted); background:var(--surface-2); font-weight:500; }.data-table td small { display:block; color:var(--muted); margin-top:3px; }.status-live { color:var(--lime); }.status-warn { color:var(--amber); }.table-action { color:var(--lime); }
+    .table-action { cursor:pointer; }
+    .filter-active { color:var(--lime)!important; }
+    .bookmark-btn.saved { color:var(--lime); background:#202c16; border-radius:4px; }
+    .trader-card.is-hidden, .news-card.is-hidden { display:none; }
+    button:disabled { opacity:.45; cursor:not-allowed; }
+    @media (max-width: 1050px) {
+      #market-view.active { grid-template-columns:260px minmax(0,1fr); }
+      .figma-feed { width:260px; }
+      .terminal-grid { grid-template-columns: 190px 1fr; }
+      .terminal-grid > aside:last-child { grid-column: 1 / -1; }
+      .terminal-grid > aside:last-child .leaders { display:grid; grid-template-columns:repeat(3,1fr); }
+      .leader-card { border-right:1px solid var(--line); }
+      .market-layout, .manage-grid { grid-template-columns:1fr; }
+      .leader-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+      .side-note { grid-template-columns:repeat(2,1fr); }
+      .side-note h3 { grid-column:1 / -1; }
+    }
+    @media (max-width: 720px) {
+      .topbar { padding:0 12px; gap:12px; }
+      .brand span:last-child, .gas, .top-actions .icon-btn { display:none; }
+      .main-nav { flex:1; justify-content:center; }
+      .nav-btn { padding:0 5px; font-size:11px; white-space:nowrap; }
+      .nav-btn.active::after { left:5px; right:5px; }
+      .wallet { padding:0 9px; font-size:11px; }
+      .workspace { padding:12px 10px 24px; }
+      #market-view.active { display:block; }
+      .view-shell { grid-template-columns:1fr; }
+      .work-rail { display:none; }
+      .view-main { padding:10px 0 24px; }
+      .discovery-columns { grid-template-columns:1fr; }
+      .overview-grid { grid-template-columns:1fr 1fr; }
+      .detail-overview { grid-template-columns:1fr; }
+      .data-panel { overflow-x:auto; }
+      .figma-feed { display:none; }
+      #market-view > .page-head { padding:10px 0 14px; }
+      #market-view.feed-collapsed > .page-head { padding-left:50px; }
+      #market-view > .market-layout { padding:0; }
+      .terminal-grid { grid-template-columns:1fr; }
+      .terminal-grid > aside:first-child { display:none; }
+      .feed-body, .pair-action, .feed-actions { margin-left:0; }
+      .pair-action { flex-wrap:wrap; }
+      .ticker { grid-template-columns:1fr 1fr; }
+      .terminal-grid > aside:last-child .leaders { grid-template-columns:1fr; }
+      .page-head { align-items:flex-start; gap:14px; flex-direction:column; }
+      .my-copy-module { width:100%; min-width:0; }
+      .control-row { width:100%; flex-wrap:wrap; }
+      .search { flex:1; min-width:150px; }
+      .leader-grid { grid-template-columns:1fr; }
+      .side-note { grid-template-columns:1fr; }
+      .side-note h3 { grid-column:auto; }
+      .return-value { font-size:22px; }
+      .account-summary { grid-template-columns:1fr 1fr; }
+      .account-stat:nth-child(2) { border-right:0; }
+      .account-stat:nth-child(-n+2) { border-bottom:1px solid var(--line); }
+      .position-row { grid-template-columns:1fr 1fr auto; }
+      .position-row > :nth-child(3), .position-row > :nth-child(4) { display:none; }
+      .detail-stats { grid-template-columns:1fr 1fr; }
+      .detail-stat:nth-child(2) { border-right:0; }
+      .detail-stat:nth-child(-n+2) { border-bottom:1px solid var(--line); }
+      .dp-grid { grid-template-columns:1fr 1fr; }
+      .detail-kpis { grid-template-columns:1fr 1fr; }
+      .detail-kpi:nth-child(2) { border-right:0; }
+      .detail-kpi:nth-child(-n+2) { border-bottom:1px solid var(--line); }
+      .detail-profile { flex-wrap:wrap; }
+      .profile-actions { width:100%; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header class="topbar">
+      <div class="brand"><div class="brand-mark">eX</div><div>edgeX <span>Signal</span></div></div>
+      <nav class="main-nav" aria-label="主导航">
+        <button class="nav-btn active" data-view="market">链上跟单</button>
+        <button class="nav-btn" data-view="intel">发现</button>
+        <button class="nav-btn" data-view="manage">我的跟单</button>
+      </nav>
+      <div class="top-actions">
+        <div class="gas"><span class="dot"></span>Arbitrum · 0.02 Gwei</div>
+        <button class="icon-btn" aria-label="通知"><i data-lucide="bell"></i></button>
+        <button class="wallet" id="walletBtn">0x7A3E...19F2</button>
+      </div>
+    </header>
+
+    <main class="workspace">
+      <section class="view" id="intel-view">
+        <div class="view-shell">
+          <aside class="work-rail"><div class="rail-label">跟单工作台</div><div class="rail-item"><i data-lucide="compass"></i>带单首页</div><div class="rail-item active"><i data-lucide="radio"></i>信息流</div><div class="rail-item"><i data-lucide="layers"></i>我的跟单</div><div class="rail-sep"></div><div class="rail-label">工具与支持</div><div class="rail-item"><i data-lucide="bookmark"></i>我的订阅</div><div class="rail-item"><i data-lucide="book-open"></i>跟单指南</div><div class="rail-account"><small>我的账户权益</small><b>25,186.42</b><small>USDT · 统一交易账户</small><button>划转资金</button></div></aside>
+          <div class="view-main"><div class="view-title"><h1>信息流</h1><p>收集 KOL 观点、新闻与市场动态，关注与我相关的信息与交易动态。</p></div><div class="scope-switch"><div class="segmented"><button class="active">与我相关 · 6</button><button>全部信息</button></div><span class="scope-note">全部：名人 / KOL 观点与新闻 ｜ 与我相关：关注账户的订阅观点与交易动态</span></div>
+            <div class="discovery-columns"><div class="discovery-feed"><div class="discovery-filter"><b>全部来源</b><span>名人 / KOL</span><span>新闻资讯</span><span style="margin-left:auto">↻ 最新发布</span></div>
+              <article class="news-card"><div class="news-author"><span class="avatar green" style="width:38px;height:38px">岚</span><span class="who"><strong>岚序 <span class="badge">已认证</span></strong><small>@lanxu_demo · 推特观点 · 5 分钟前</small></span><i data-lucide="ellipsis"></i></div><p>BTC 回踩 67,400 后承接依然稳健，关注 68,800 附近的流动性。当前维持轻仓多头，不追涨；若跌破前低会主动降低风险敞口。前几次比杠杆更重要。</p><div class="news-market"><b>BTC / USDT</b><span>68,240.50</span><em>+2.34%</em><button class="tradeAction">交易合约 ↗</button></div><div class="news-actions"><span>♡ 128</span><span>◯ 24</span><span>▱ 收藏</span><span style="margin-left:auto;color:var(--lime)">查看带单账户 →</span></div></article>
+              <article class="news-card"><div class="news-author"><span class="avatar blue" style="width:38px;height:38px">讯</span><span class="who"><strong>链讯快报</strong><small>市场资讯 · 新闻 · 18 分钟前</small></span><i data-lucide="ellipsis"></i></div><p><strong>比特币现货 ETF 连续三个交易日录得净流入</strong></p><p>机构资金流向保持活跃，市场关注美盘流动性变化。短期波动可能放大，请留意仓位与保证金水平。</p><div class="news-market"><b>BTC / USDT</b><span>68,240.50</span><em>+2.34%</em><button>交易合约 ↗</button></div><div class="news-actions"><span>♡ 128</span><span>◯ 24</span><span style="margin-left:auto">阅读原文 ↗</span></div></article>
+              <article class="news-card"><div class="news-author"><span class="avatar" style="width:38px;height:38px">零</span><span class="who"><strong>零度研究 <span class="badge">已认证</span></strong><small>@zero_demo · 推特观点 · 32 分钟前</small></span><i data-lucide="ellipsis"></i></div><p>ETH 目前处于区间上沿，资金费率有所抬升。我会等待 3,600 一线的确认信号，避免在方向不明确时重仓。以下仅为策略记录，不构成投资建议。</p><div class="news-market"><b>ETH / USDT</b><span>3,562.80</span><em>+1.82%</em><button class="tradeAction">交易合约 ↗</button></div><div class="news-actions"><span>♡ 86</span><span>◯ 18</span><span style="margin-left:auto;color:var(--lime)">查看带单账户 →</span></div></article>
+            </div><aside><div class="related-panel"><div class="side-panel-head"><b>与我相关</b><span>6 条未读</span></div><div class="activity"><small>跟单成交 · 14:27</small><strong>岚序 · BTC 多单已同步</strong><a>查看我的跟单 →</a></div><div class="activity"><small>反向跟单 · 14:18</small><strong>零度研究 · 反向空单已开仓</strong><a>管理反向策略 →</a></div><div class="activity"><small>订阅观点 · 14:10</small><strong>岚序更新了市场观察</strong><a>查看完整观点 →</a></div></div><div class="market-panel"><div class="side-panel-head"><b>市场关注</b><small>近 24 小时</small></div><div class="market-row"><span>01</span><b>BTC / USDT</b><em>+2.34%</em></div><div class="market-row"><span>02</span><b>ETH / USDT</b><em>+1.82%</em></div><div class="market-row"><span>03</span><b>SOL / USDT</b><em style="color:var(--red)">−0.64%</em></div></div></aside></div>
+          </div>
+        </div>
+        <div class="terminal-grid">
+          <aside class="panel">
+            <div class="panel-head"><span class="panel-title">市场情绪</span><span class="source-tag trade">LIVE</span></div>
+            <div class="signal-summary">
+              <div class="summary-label">Signal Index</div><div class="summary-value">72.8 <span>偏多 +8.4%</span></div>
+              <div class="mini-bars"><b style="height:22%"></b><b style="height:34%"></b><b style="height:29%"></b><b style="height:48%"></b><b style="height:43%"></b><b style="height:66%"></b><b class="hot" style="height:83%"></b><b class="hot" style="height:72%"></b></div>
+            </div>
+            <div class="panel-head"><span class="panel-title">关注对象</span><button class="panel-link">管理</button></div>
+            <div class="watch-list">
+              <button class="watch-item active"><span class="avatar green">AP</span><span class="who"><strong>Andrew P.</strong><small>@AP_Abacus</small></span><span class="change">+18.2%</span></button>
+              <button class="watch-item"><span class="avatar blue">AZ</span><span class="who"><strong>Arthur Z.</strong><small>@cryptozebra</small></span><span class="change">+12.7%</span></button>
+              <button class="watch-item"><span class="avatar gold">MW</span><span class="who"><strong>Macro Watch</strong><small>News desk</small></span><span class="change down">-3.4%</span></button>
+              <button class="watch-item"><span class="avatar">0x</span><span class="who"><strong>0xWhale</strong><small>0x88e...43a1</small></span><span class="change">+41.0%</span></button>
+              <button class="watch-item"><span class="avatar green">DW</span><span class="who"><strong>DeFi Waves</strong><small>@defiwaves</small></span><span class="change">+8.6%</span></button>
+            </div>
+          </aside>
+
+          <section class="panel feed">
+            <div class="panel-head">
+              <div class="feed-tabs"><button class="feed-tab active" data-feed="all">全部</button><button class="feed-tab" data-feed="related">与我相关</button></div>
+              <button class="icon-btn" aria-label="刷新信息流" style="width:30px;height:30px"><i data-lucide="refresh-cw"></i></button>
+            </div>
+            <div id="feedList">
+              <article class="feed-item" data-type="all related">
+                <div class="feed-meta"><div class="avatar green">AP</div><div class="feed-source"><strong>Andrew P.</strong><span class="verified">●</span><span>@AP_Abacus</span></div><span class="source-tag trade">持仓更新</span><time class="feed-time">3 分钟前</time></div>
+                <div class="feed-body">刚刚将 <strong>ETH 多仓加仓 35%</strong>。当前价格仍在周线结构支撑上方，失效位设在 $3,420。短期关注 ETF 净流入数据。</div>
+                <div class="pair-action"><div class="token-icon">ETH</div><div class="pair-main"><strong>ETH / USDC</strong><span>永续 · 20x</span></div><div class="pair-price">$3,684.20<small>+2.84%</small></div><button class="trade-btn copyTrigger">跟随开仓</button></div>
+                <div class="feed-actions"><button class="quiet-action"><i data-lucide="message-circle"></i>142</button><button class="quiet-action"><i data-lucide="repeat-2"></i>328</button><button class="quiet-action subscribeAction"><i data-lucide="bell-plus"></i>订阅动态</button></div>
+              </article>
+              <article class="feed-item" data-type="all">
+                <div class="feed-meta"><div class="avatar gold"><i data-lucide="newspaper" style="width:15px"></i></div><div class="feed-source"><strong>BlockWire News</strong><span>@BlockWire</span></div><span class="source-tag">快讯</span><time class="feed-time">12 分钟前</time></div>
+                <div class="feed-body"><strong>美国现货 ETH ETF 单日净流入创三周新高</strong>，总净流入达 2.18 亿美元。其中 BlackRock ETHA 占比 61%。</div>
+                <div class="pair-action"><div class="token-icon">ETH</div><div class="pair-main"><strong>ETH / USDC</strong><span>24h Vol $842.6M</span></div><div class="pair-price">$3,684.20<small>+2.84%</small></div><button class="trade-btn tradeAction">去交易</button></div>
+                <div class="feed-actions"><button class="quiet-action"><i data-lucide="bookmark"></i>收藏</button><button class="quiet-action"><i data-lucide="share-2"></i>分享</button></div>
+              </article>
+              <article class="feed-item" data-type="all related">
+                <div class="feed-meta"><div class="avatar blue">AZ</div><div class="feed-source"><strong>Arthur Z.</strong><span class="verified">●</span><span>@cryptozebra</span></div><span class="source-tag">观点</span><time class="feed-time">26 分钟前</time></div>
+                <div class="feed-body">SOL 的相对强度正在回归。链上活跃地址和 DEX 成交量同步上升，但这里不追高，等回踩 $172-$176 区域。<div class="quote">观点置信度 78% · 计划持有 2-5 天 · 风险等级 中</div></div>
+                <div class="pair-action"><div class="token-icon">SOL</div><div class="pair-main"><strong>SOL / USDC</strong><span>永续 · 5x</span></div><div class="pair-price">$181.42<small>+4.12%</small></div><button class="trade-btn tradeAction">去交易</button></div>
+                <div class="feed-actions"><button class="quiet-action"><i data-lucide="message-circle"></i>86</button><button class="quiet-action subscribeAction"><i data-lucide="bell-plus"></i>已订阅</button></div>
+              </article>
+              <article class="feed-item" data-type="all related">
+                <div class="feed-meta"><div class="avatar">0x</div><div class="feed-source"><strong>0xWhale</strong><span>0x88e...43a1</span></div><span class="source-tag trade">链上异动</span><time class="feed-time">41 分钟前</time></div>
+                <div class="feed-body">高胜率地址从 Binance 提出 <strong>1,240,000 USDC</strong>，并在 edgeX 建立 BTC 多仓。该地址近 30 天胜率 73.1%。</div>
+                <div class="pair-action"><div class="token-icon">BTC</div><div class="pair-main"><strong>BTC / USDC</strong><span>永续 · 8x</span></div><div class="pair-price">$68,942.10<small>+1.27%</small></div><button class="trade-btn copyTrigger">反向/跟随</button></div>
+                <div class="feed-actions"><button class="quiet-action"><i data-lucide="scan-search"></i>查看地址</button><button class="quiet-action subscribeAction"><i data-lucide="bell-plus"></i>订阅地址</button></div>
+              </article>
+            </div>
+          </section>
+
+          <aside class="panel">
+            <div class="panel-head"><span class="panel-title">热门带单</span><button class="panel-link" data-go="market">查看榜单</button></div>
+            <div class="leaders">
+              <div class="leader-card openTrader"><div class="leader-top"><span class="rank">01</span><div class="avatar green">AP</div><div class="leader-name"><strong>Andrew P. <span class="badge">已认证</span></strong><small>0x71b...82f9</small></div></div><div class="leader-metrics"><div class="metric"><small>30D 收益</small><b class="pos">+$184.2K</b></div><div class="metric"><small>权益</small><b>$1.92M</b></div><div class="metric"><small>胜率</small><b>71.4%</b></div></div><svg class="spark" viewBox="0 0 250 34" preserveAspectRatio="none"><path class="area" d="M0 29L25 25L50 28L75 17L100 20L125 12L150 15L175 8L200 11L225 3L250 5V34H0Z"/><path class="line" d="M0 29L25 25L50 28L75 17L100 20L125 12L150 15L175 8L200 11L225 3L250 5"/></svg></div>
+              <div class="leader-card openTrader"><div class="leader-top"><span class="rank">02</span><div class="avatar blue">0x</div><div class="leader-name"><strong>0xWhale <span class="badge">已认证</span></strong><small>0x88e...43a1</small></div></div><div class="leader-metrics"><div class="metric"><small>30D 收益</small><b class="pos">+$96.8K</b></div><div class="metric"><small>权益</small><b>$840K</b></div><div class="metric"><small>胜率</small><b>73.1%</b></div></div><svg class="spark" viewBox="0 0 250 34" preserveAspectRatio="none"><path class="line" d="M0 27L25 24L50 18L75 22L100 14L125 17L150 8L175 11L200 6L225 9L250 2"/></svg></div>
+              <div class="leader-card openTrader"><div class="leader-top"><span class="rank">03</span><div class="avatar gold">CZ</div><div class="leader-name"><strong>CryptoZebra <span class="badge">已认证</span></strong><small>0xa2c...90e8</small></div></div><div class="leader-metrics"><div class="metric"><small>30D 收益</small><b class="pos">+$72.1K</b></div><div class="metric"><small>权益</small><b>$625K</b></div><div class="metric"><small>胜率</small><b>68.6%</b></div></div><svg class="spark" viewBox="0 0 250 34" preserveAspectRatio="none"><path class="line" d="M0 30L25 20L50 23L75 15L100 19L125 10L150 13L175 7L200 14L225 5L250 8"/></svg></div>
+            </div>
+          </aside>
+        </div>
+        <div class="ticker"><div class="ticker-item"><span>BTC-PERP</span><b>$68,942</b><em>+1.27%</em></div><div class="ticker-item"><span>ETH-PERP</span><b>$3,684</b><em>+2.84%</em></div><div class="ticker-item"><span>SOL-PERP</span><b>$181.42</b><em>+4.12%</em></div><div class="ticker-item"><span>ARB-PERP</span><b>$1.183</b><em>+0.92%</em></div></div>
+      </section>
+
+      <section class="view active" id="market-view">
+        <button class="icon-btn feed-expand" aria-label="展开信息流" title="展开信息流"><i data-lucide="panel-left-open"></i></button>
+        <aside class="figma-feed"><div class="figma-feed-inner">
+          <div class="figma-feed-head"><strong>信息流</strong><button class="icon-btn" style="width:32px;height:32px" aria-label="收起信息流"><i data-lucide="panel-left-close"></i></button></div>
+          <div class="figma-feed-switch"><button>全部信息</button><button class="active">与我相关 · 6</button></div>
+          <div class="figma-feed-filter"><b>全部来源</b><span>名人 / KOL</span><span>新闻资讯</span></div>
+          <article class="side-feed-card"><div class="side-feed-author"><span class="avatar green">岚</span><span class="who"><strong>岚序</strong><small>@lanxu_demo · 推特观点</small></span><i data-lucide="ellipsis" style="width:14px"></i></div><p>BTC 回踩 67,400 后承接依然稳健，关注 68,800 附近的流动性。当前维持轻仓多头，不追涨。</p><div class="side-market"><div class="side-market-line"><b>BTC / USDT</b><span>68,240.50</span><em>+2.34%</em></div><button class="tradeAction">交易合约 ↗</button></div></article>
+          <article class="side-feed-card"><div class="side-feed-author"><span class="avatar blue">讯</span><span class="who"><strong>链讯快报</strong><small>市场资讯 · 新闻</small></span><i data-lucide="ellipsis" style="width:14px"></i></div><p>比特币现货 ETF 连续三个交易日录得净流入，机构资金流向保持活跃，市场关注美盘流动性变化。</p><div class="side-market"><div class="side-market-line"><b>BTC / USDT</b><span>68,240.50</span><em>+2.34%</em></div><button>阅读原文 ↗</button></div></article>
+          <article class="side-feed-card"><div class="side-feed-author"><span class="avatar">零</span><span class="who"><strong>零度研究</strong><small>@zero_demo · 推特观点</small></span><i data-lucide="ellipsis" style="width:14px"></i></div><p>ETH 目前处于区间上沿，资金费率有所抬升。我会等待 3,600 一线的确认信号。</p><div class="side-market"><div class="side-market-line"><b>ETH / USDT</b><span>3,562.80</span><em>+1.82%</em></div><button class="tradeAction">交易合约 ↗</button></div></article>
+          <div class="related-card"><b>跟单成交</b><strong>岚序 · BTC 多单已同步</strong><p>BTC / USDT · 5× 逐仓，成交价 67,480.00 USDT，跟单数量 0.012 BTC。</p></div>
+        </div></aside>
+        <div class="page-head"><div><h1>发现链上策略</h1><p>自主选择，无需分润</p><div class="market-subnav"><button class="active">全部带单者</button><button>我的关注</button></div></div><aside class="my-copy-module"><div class="my-copy-module-head"><strong>我的跟单</strong><span>3 个策略运行中</span></div><div class="my-copy-module-body"><div class="my-copy-equity"><small>跟单账户权益（USDT）</small><b>13,482.60</b></div><div class="overview-actions"><button class="primary-btn equityTransfer">划转</button><button class="secondary-btn equityDetails" data-go="manage">详情</button></div></div></aside></div>
+        <div class="market-layout">
+          <section><div class="leader-grid-head"><div class="control-row"><select class="select"><option>近 30 日</option><option>近 7 日</option></select><select class="select"><option>认证状态</option><option>已认证</option><option>未认证</option></select><select class="select"><option>最大回撤</option></select><select class="select"><option>交易币对</option></select></div><div class="control-row"><input class="search" placeholder="搜索名称、地址或推特账户"><select class="select"><option>收益额</option><option>胜率</option><option>跟单人数</option></select></div></div><div class="leader-grid">
+            <article class="trader-card openTrader"><div class="trader-card-top"><div class="trader-cell"><span class="avatar green">AP</span><span class="info"><strong>Andrew P. <span class="badge">A3 认证</span></strong><small>@AP_Abacus ↗</small></span></div><button class="bookmark-btn subscribeAction" aria-label="收藏"><i data-lucide="bookmark"></i></button></div><div class="card-address">0x71b...82f9 <i data-lucide="copy"></i><span>· 多币种趋势 · BTC / ETH</span></div><div class="return-block"><div><div class="return-label">近 30 日收益额（USDT）</div><div class="return-value">+184,240.00</div><div class="return-rate">+42.86%</div></div><div class="card-chart"><svg viewBox="0 0 108 52" preserveAspectRatio="none"><path d="M0 48L14 40L28 43L42 27L56 32L70 18L84 21L98 5L108 8V52H0Z"/><polyline points="0,48 14,40 28,43 42,27 56,32 70,18 84,21 98,5 108,8"/></svg></div></div><div class="card-stats"><div class="card-stat"><small>账户权益</small><b>1,924,680</b></div><div class="card-stat"><small>胜率</small><b>71.4%</b></div><div class="card-stat"><small>最大回撤</small><b>8.2%</b></div></div><div class="copy-scale"><span>328 人跟单 · 分润 10%</span><span class="detail-link">查看详情 →</span></div><div class="card-actions"><button class="trade-btn copyTrigger">跟单</button><button class="secondary-btn reverseTrigger">反向跟单</button><button class="quiet-action subscribeAction">订阅</button></div></article>
+            <article class="trader-card openTrader"><div class="trader-card-top"><div class="trader-cell"><span class="avatar blue">0x</span><span class="info"><strong>0xWhale <span class="badge">A2 认证</span></strong><small>@whale_onchain ↗</small></span></div><button class="bookmark-btn subscribeAction" aria-label="收藏"><i data-lucide="bookmark"></i></button></div><div class="card-address">0x88e...43a1 <i data-lucide="copy"></i><span>· 日内波段 · BTC / SOL</span></div><div class="return-block"><div><div class="return-label">近 30 日收益额（USDT）</div><div class="return-value">+96,820.40</div><div class="return-rate">+36.71%</div></div><div class="card-chart"><svg viewBox="0 0 108 52" preserveAspectRatio="none"><path d="M0 46L14 42L28 31L42 36L56 22L70 27L84 11L98 16L108 6V52H0Z"/><polyline points="0,46 14,42 28,31 42,36 56,22 70,27 84,11 98,16 108,6"/></svg></div></div><div class="card-stats"><div class="card-stat"><small>账户权益</small><b>840,210</b></div><div class="card-stat"><small>胜率</small><b>73.1%</b></div><div class="card-stat"><small>最大回撤</small><b>11.6%</b></div></div><div class="copy-scale"><span>196 人跟单 · 分润 10%</span><span class="detail-link">查看详情 →</span></div><div class="card-actions"><button class="trade-btn copyTrigger">跟单</button><button class="secondary-btn reverseTrigger">反向跟单</button><button class="quiet-action subscribeAction">订阅</button></div></article>
+            <article class="trader-card openTrader"><div class="trader-card-top"><div class="trader-cell"><span class="avatar gold">CZ</span><span class="info"><strong>CryptoZebra <span class="badge">A2 认证</span></strong><small>@cryptozebra ↗</small></span></div><button class="bookmark-btn subscribeAction" aria-label="收藏"><i data-lucide="bookmark"></i></button></div><div class="card-address">0xa2c...90e8 <i data-lucide="copy"></i><span>· 趋势交易 · ETH / SOL</span></div><div class="return-block"><div><div class="return-label">近 30 日收益额（USDT）</div><div class="return-value">+72,140.20</div><div class="return-rate">+28.43%</div></div><div class="card-chart"><svg viewBox="0 0 108 52" preserveAspectRatio="none"><path d="M0 48L14 27L28 34L42 19L56 30L70 14L84 20L98 7L108 13V52H0Z"/><polyline points="0,48 14,27 28,34 42,19 56,30 70,14 84,20 98,7 108,13"/></svg></div></div><div class="card-stats"><div class="card-stat"><small>账户权益</small><b>625,470</b></div><div class="card-stat"><small>胜率</small><b>68.6%</b></div><div class="card-stat"><small>最大回撤</small><b>9.7%</b></div></div><div class="copy-scale"><span>142 人跟单 · 分润 8%</span><span class="detail-link">查看详情 →</span></div><div class="card-actions"><button class="trade-btn copyTrigger">跟单</button><button class="secondary-btn reverseTrigger">反向跟单</button><button class="quiet-action subscribeAction">订阅</button></div></article>
+            <article class="trader-card openTrader"><div class="trader-card-top"><div class="trader-cell"><span class="avatar">NT</span><span class="info"><strong>NeutralTrader <span class="badge">A1 认证</span></strong><small>@neutraldesk ↗</small></span></div><button class="bookmark-btn subscribeAction" aria-label="收藏"><i data-lucide="bookmark"></i></button></div><div class="card-address">0xf31...70c2 <i data-lucide="copy"></i><span>· 市场中性 · BTC / ETH</span></div><div class="return-block"><div><div class="return-label">近 30 日收益额（USDT）</div><div class="return-value">+51,890.80</div><div class="return-rate">+18.92%</div></div><div class="card-chart"><svg viewBox="0 0 108 52" preserveAspectRatio="none"><path d="M0 45L14 42L28 38L42 40L56 29L70 24L84 27L98 14L108 9V52H0Z"/><polyline points="0,45 14,42 28,38 42,40 56,29 70,24 84,27 98,14 108,9"/></svg></div></div><div class="card-stats"><div class="card-stat"><small>账户权益</small><b>412,300</b></div><div class="card-stat"><small>胜率</small><b>64.8%</b></div><div class="card-stat"><small>最大回撤</small><b>6.3%</b></div></div><div class="copy-scale"><span>87 人跟单 · 分润 8%</span><span class="detail-link">查看详情 →</span></div><div class="card-actions"><button class="trade-btn copyTrigger">跟单</button><button class="secondary-btn reverseTrigger">反向跟单</button><button class="quiet-action subscribeAction">订阅</button></div></article>
+          </div><div class="pagination"><span>共 128 个带单账户 · 当前展示 1–4</span><div class="page-buttons"><button>上一页</button><button class="active">1</button><button>2</button><button>3</button><button>下一页</button></div></div></section>
+        </div>
+      </section>
+
+      <section class="view" id="manage-view">
+        <div class="view-shell"><aside class="work-rail"><div class="rail-label">跟单工作台</div><div class="rail-item"><i data-lucide="compass"></i>带单首页</div><div class="rail-item"><i data-lucide="radio"></i>信息流</div><div class="rail-item active"><i data-lucide="layers"></i>我的跟单</div><div class="rail-sep"></div><div class="rail-label">工具与支持</div><div class="rail-item"><i data-lucide="bookmark"></i>我的订阅</div><div class="rail-item"><i data-lucide="book-open"></i>跟单指南</div><div class="rail-account"><small>我的账户权益</small><b>25,186.42</b><small>USDT · 统一交易账户</small><button>划转资金</button></div></aside>
+          <div class="view-main"><div class="manage-head"><div class="view-title"><h1>我的跟单与订阅管理</h1><p>管理你的跟随关系与内容订阅，清晰掌握每一种连接。</p></div><button class="secondary-btn">跟单设置</button></div><div class="identity-strip"><span class="avatar green">我</span><strong>我的跟单与订阅</strong><span class="badge">跟单用户视角</span><span>0x91D8...6E2A</span><a>查看我的跟单与订阅 ↗</a></div><div class="overview-grid"><div class="overview-stat"><small>跟单账户</small><b>3</b><span>运行中 3 · 已暂停 0</span></div><div class="overview-stat"><small>订阅账户</small><b>4</b><span>订阅中 4 · 即将到期 1</span></div><div class="overview-stat"><small>跟单账户权益（USDT）</small><b>13,482.60</b><span>可用余额 1,482.60</span><div class="overview-actions"><button class="primary-btn equityTransfer">划转</button><button class="secondary-btn equityDetails">详情</button></div></div><div class="overview-stat"><small>本月累计收益（USDT）</small><b style="color:var(--lime)">+885.75</b><span>已实现 +624.30 · 浮动 +261.45</span></div></div>
+            <section class="data-panel"><div class="data-panel-head"><h2>我跟单的账户</h2><div class="control-row"><select class="select"><option>全部方向</option></select><select class="select"><option>全部状态</option></select><button class="secondary-btn">导出账户</button></div></div><div class="table-wrap"><table class="data-table"><thead><tr><th>带单账户 / 链上地址</th><th>关系方向</th><th>跟单资金</th><th>累计收益</th><th>状态</th><th>开始跟单时间</th><th>管理操作</th></tr></thead><tbody><tr><td>岚序<small>0x7A3f...92C1</small></td><td class="status-live">同向跟单</td><td>5,000.00</td><td class="status-live">+642.25</td><td class="status-live">● 运行中</td><td>2026-10-12 09:30</td><td class="table-action">详情　停止</td></tr><tr><td>零度研究<small>0xB82e...4D09</small></td><td>反向跟单</td><td>4,000.00</td><td style="color:var(--red)">−175.40</td><td class="status-live">● 运行中</td><td>2026-10-15 11:08</td><td class="table-action">详情　停止</td></tr><tr><td>鲸落<small>0x63C9...7F12</small></td><td class="status-live">同向跟单</td><td>3,000.00</td><td class="status-live">+418.90</td><td class="status-live">● 运行中</td><td>2026-10-16 14:27</td><td class="table-action">详情　停止</td></tr></tbody></table></div></section>
+            <section class="data-panel"><div class="data-panel-head"><h2>我订阅的账户</h2><div class="control-row"><button class="secondary-btn">发送订阅通知</button><button class="secondary-btn">订阅设置</button></div></div><div class="table-wrap"><table class="data-table"><thead><tr><th>账户 / 链上地址</th><th>订阅内容</th><th>通知方式</th><th>订阅状态</th><th>到期时间</th><th>关系</th><th>管理操作</th></tr></thead><tbody><tr><td>岚序<small>0x7A3f...92C1</small></td><td>交易 + 观点</td><td>站内 + 邮件</td><td class="status-live">订阅中</td><td>2026-11-12</td><td class="status-live">同时跟单</td><td class="table-action">详情　取消</td></tr><tr><td>零度研究<small>0xB82e...4D09</small></td><td>观点提醒</td><td>站内通知</td><td class="status-live">订阅中</td><td>2026-11-08</td><td>仅订阅</td><td class="table-action">详情　取消</td></tr><tr><td>鲸落<small>0x63C9...7F12</small></td><td>交易提醒</td><td>站内通知</td><td class="status-live">订阅中</td><td>2026-11-10</td><td class="status-live">同时跟单</td><td class="table-action">详情　取消</td></tr><tr><td>北辰<small>0xF04a...A827</small></td><td>交易 + 观点</td><td>站内 + 邮件</td><td class="status-warn">即将到期 · 3 天</td><td>2026-10-23</td><td>仅订阅</td><td class="table-action">提醒续订</td></tr></tbody></table></div></section>
+          </div>
+        </div>
+        <div class="page-head"><div><h1>我的跟单</h1><p>统一管理跟单资金、执行策略与信息订阅。</p></div><button class="primary-btn copyTrigger" style="height:34px"><i data-lucide="plus" style="width:14px;vertical-align:middle"></i> 新建跟单</button></div>
+        <div class="manage-grid">
+          <section class="panel"><div class="account-summary"><div class="account-stat"><small>跟单总权益</small><b>$24,820.40</b></div><div class="account-stat"><small>累计净收益</small><b style="color:var(--green)">+$3,482.16</b></div><div class="account-stat"><small>今日盈亏</small><b style="color:var(--green)">+$318.90</b></div><div class="account-stat"><small>运行策略</small><b>3</b></div></div><div class="panel-head"><span class="panel-title">跟单账户</span><button class="panel-link">风险设置</button></div><div class="position-row head"><span>带单账户</span><span>分配资金</span><span>浮动盈亏</span><span>模式</span><span>操作</span></div><div class="position-row"><div class="trader-cell"><span class="avatar green">AP</span><span class="info"><strong>Andrew P.</strong><small>0x71b...82f9</small></span></div><span>$12,000</span><span class="change">+$842.10</span><span>等比例</span><button class="danger-link stopAction">停止</button></div><div class="position-row"><div class="trader-cell"><span class="avatar blue">0x</span><span class="info"><strong>0xWhale</strong><small>0x88e...43a1</small></span></div><span>$8,000</span><span class="change">+$217.84</span><span>固定保证金</span><button class="danger-link stopAction">停止</button></div><div class="position-row"><div class="trader-cell"><span class="avatar gold">CZ</span><span class="info"><strong>CryptoZebra</strong><small>0xa2c...90e8</small></span></div><span>$4,000</span><span class="change down">-$62.40</span><span>反向</span><button class="danger-link stopAction">停止</button></div></section>
+          <aside class="panel"><div class="panel-head"><span class="panel-title">信息订阅</span><button class="panel-link">全部设置</button></div><div class="subscription"><span class="avatar green">AP</span><span class="who"><strong>Andrew P.</strong><small>交易 + 观点</small></span><button class="toggle on" aria-label="切换订阅"></button></div><div class="subscription"><span class="avatar blue">AZ</span><span class="who"><strong>Arthur Z.</strong><small>观点</small></span><button class="toggle on" aria-label="切换订阅"></button></div><div class="subscription"><span class="avatar">0x</span><span class="who"><strong>0xWhale</strong><small>链上交易</small></span><button class="toggle on" aria-label="切换订阅"></button></div><div class="subscription"><span class="avatar gold">BW</span><span class="who"><strong>BlockWire</strong><small>突发新闻</small></span><button class="toggle" aria-label="切换订阅"></button></div></aside>
+        </div>
+      </section>
+
+      <section class="view" id="detail-view">
+        <div class="view-shell"><aside class="work-rail"><div class="rail-label">跟单工作台</div><div class="rail-item detailBack"><i data-lucide="compass"></i>带单首页</div><div class="rail-item"><i data-lucide="radio"></i>信息流</div><div class="rail-item"><i data-lucide="layers"></i>我的跟单</div><div class="rail-sep"></div><div class="rail-label">工具与支持</div><div class="rail-item"><i data-lucide="bookmark"></i>我的订阅</div><div class="rail-item"><i data-lucide="book-open"></i>跟单指南</div><div class="rail-account"><small>我的账户权益</small><b>25,186.42</b><small>USDT · 统一交易账户</small><button>划转资金</button></div></aside>
+          <div class="view-main"><div class="detail-breadcrumb"><button class="detailBack">带单首页</button><i data-lucide="chevron-right" style="width:12px"></i><span>带单详情</span></div>
+            <div class="detail-profile"><span class="avatar green">岚</span><div class="detail-profile-main"><h1>岚序 <span class="badge">已认证</span></h1><div class="profile-meta"><span>0x7A3f...92C1</span><span>@lanxu_demo ↗</span><span>运行 286 天</span><span>多币种趋势</span></div><p>顺应中周期趋势，以 BTC、ETH 为主，结合资金费率和链上净流入控制仓位。</p></div><div class="profile-actions"><button class="secondary-btn subscribeAction"><i data-lucide="bell" style="width:14px;vertical-align:middle"></i> 已订阅</button><button class="secondary-btn browserAction">链上浏览器 ↗</button></div></div>
+            <div class="detail-kpis"><div class="detail-kpi"><small>近 30 日收益额（USDT）</small><b style="color:var(--lime)">+128,450.60</b></div><div class="detail-kpi"><small>账户权益（USDT）</small><b>1,924,680.20</b></div><div class="detail-kpi"><small>胜率</small><b>71.4%</b></div><div class="detail-kpi"><small>最大回撤</small><b>8.2%</b></div></div>
+            <div class="detail-overview"><section class="performance-panel"><div class="performance-head"><h2>累计收益</h2><div class="period-tabs"><button>7日</button><button class="active">30日</button><button>90日</button><button>全部</button></div></div><div class="performance-chart"><svg viewBox="0 0 800 230" preserveAspectRatio="none"><defs><linearGradient id="detailFade" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#22FD73" stop-opacity=".2"/><stop offset="1" stop-color="#22FD73" stop-opacity="0"/></linearGradient></defs><path d="M0 206L55 190L110 198L165 162L220 170L275 132L330 145L385 112L440 121L495 82L550 94L605 58L660 71L715 28L800 42V230H0Z" fill="url(#detailFade)"/><path d="M0 206L55 190L110 198L165 162L220 170L275 132L330 145L385 112L440 121L495 82L550 94L605 58L660 71L715 28L800 42" fill="none" stroke="#22FD73" stroke-width="2"/></svg></div></section><aside class="copy-panel"><h2>跟单设置</h2><div class="copy-setting"><span>跟单容量</span><b>328 / 500</b></div><div class="copy-setting"><span>最低保证金</span><b>100 USDT</b></div><div class="copy-setting"><span>分配方式</span><b>按权益比例</b></div><div class="copy-setting"><span>最大杠杆</span><b>20x</b></div><div class="card-actions"><button class="primary-btn copyTrigger">跟单</button><button class="secondary-btn reverseTrigger">反向跟单</button></div></aside></div>
+            <section class="detail-section"><h2>当前持仓</h2><div class="table-wrap"><table class="data-table"><thead><tr><th>合约</th><th>方向 / 杠杆</th><th>仓位价值</th><th>开仓均价</th><th>标记价格</th><th>未实现盈亏</th></tr></thead><tbody><tr><td>ETH / USDT</td><td class="status-live">多 · 20x</td><td>418,200.00</td><td>3,521.80</td><td>3,684.20</td><td class="status-live">+42,840.20</td></tr><tr><td>BTC / USDT</td><td class="status-live">多 · 8x</td><td>285,100.00</td><td>65,772.00</td><td>68,942.10</td><td class="status-live">+18,290.40</td></tr><tr><td>ARB / USDT</td><td style="color:var(--red)">空 · 5x</td><td>94,800.00</td><td>1.1420</td><td>1.1830</td><td style="color:var(--red)">−3,410.80</td></tr></tbody></table></div></section>
+            <section class="detail-section"><h2>历史交易</h2><div class="table-wrap"><table class="data-table"><thead><tr><th>合约</th><th>方向</th><th>开仓价</th><th>平仓价</th><th>已实现盈亏</th><th>持仓时间</th><th>平仓时间</th></tr></thead><tbody><tr><td>SOL / USDT</td><td class="status-live">多</td><td>162.40</td><td>178.62</td><td class="status-live">+12,480.00</td><td>3天 8时</td><td>2026-10-19 16:42</td></tr><tr><td>BTC / USDT</td><td style="color:var(--red)">空</td><td>71,240.00</td><td>69,870.00</td><td class="status-live">+8,920.00</td><td>18时 22分</td><td>2026-10-17 11:08</td></tr></tbody></table></div></section>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <div class="drawer-mask" id="drawerMask">
+    <aside class="drawer" aria-label="带单账户详情">
+      <div class="drawer-head"><div class="avatar green" style="width:42px;height:42px">AP</div><div class="drawer-title"><h2>Andrew P. <span class="verified">●</span></h2><p>0x71b9...82f9 · @AP_Abacus</p><div class="verify-row"><span>已认证</span></div></div><button class="icon-btn" id="closeDrawer" aria-label="关闭"><i data-lucide="x"></i></button></div>
+      <div class="detail-actions"><button class="primary-btn copyTrigger">跟单</button><button class="secondary-btn reverseTrigger">反向跟单</button><button class="icon-btn subscribeAction" aria-label="订阅"><i data-lucide="bell-plus"></i></button></div>
+      <div class="detail-stats"><div class="detail-stat"><small>30D 收益额</small><b style="color:var(--green)">+$184.2K</b></div><div class="detail-stat"><small>账户权益</small><b>$1.92M</b></div><div class="detail-stat"><small>胜率</small><b>71.4%</b></div><div class="detail-stat"><small>最大回撤</small><b>8.2%</b></div></div>
+      <div class="detail-chart"><svg viewBox="0 0 500 115" preserveAspectRatio="none"><defs><linearGradient id="chartFade" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#4ddf99" stop-opacity=".22"/><stop offset="1" stop-color="#4ddf99" stop-opacity="0"/></linearGradient></defs><path d="M0 108L35 96L70 100L105 82L140 87L175 64L210 70L245 52L280 61L315 37L350 42L385 27L420 31L460 11L500 18V115H0Z" fill="url(#chartFade)"/><path d="M0 108L35 96L70 100L105 82L140 87L175 64L210 70L245 52L280 61L315 37L350 42L385 27L420 31L460 11L500 18" fill="none" stroke="#4ddf99" stroke-width="2"/></svg></div>
+      <div class="detail-tabs"><button class="detail-tab active" data-detail="positions">当前持仓 3</button><button class="detail-tab" data-detail="history">历史交易</button></div>
+      <div class="detail-content" id="detailContent"></div>
+    </aside>
+  </div>
+
+  <div class="modal-mask" id="copyModal"><div class="modal"><div class="modal-head"><h3>设置跟单参数</h3><button class="icon-btn" id="closeModal" aria-label="关闭"><i data-lucide="x"></i></button></div><div class="modal-body"><div class="mode-switch"><button class="mode-btn active" data-mode="follow">正向跟单</button><button class="mode-btn" data-mode="reverse">反向跟单</button></div><div class="field"><label>分配保证金 <span>可用 $28,420.16</span></label><input value="5,000 USDC"></div><div class="field"><label>单笔保证金上限 <span>建议 ≤ 15%</span></label><input value="750 USDC"></div><div class="field"><label>最大止损比例 <span>账户级</span></label><input value="12%"></div><div class="risk-note">策略开启后，将按交易员仓位变化自动执行。滑点、延迟和市场深度可能造成实际成交差异。</div><div class="modal-footer"><button class="secondary-btn" id="cancelModal">取消</button><button class="primary-btn" id="confirmCopy">确认开启</button></div></div></div></div>
+  <div class="toast" id="toast">设置已更新</div>
+
+  <script>
+    const $ = (s, c=document) => c.querySelector(s);
+    const $$ = (s, c=document) => [...c.querySelectorAll(s)];
+    const views = { intel: $('#intel-view'), market: $('#market-view'), manage: $('#manage-view'), detail: $('#detail-view') };
+    function renderIcons(){ if(window.lucide) lucide.createIcons(); }
+    renderIcons();
+    const leaderGrid = $('.leader-grid');
+    if(leaderGrid && leaderGrid.children.length === 4){
+      leaderGrid.append(leaderGrid.children[0].cloneNode(true), leaderGrid.children[1].cloneNode(true));
+    }
+    const traderProfiles = [
+      ['岚序','岚','@lanxu_demo ↗','0x7A3f...92C1 ','+128,450.60','+128.45%'],
+      ['零度研究','零','@zero_demo ↗','0xB82e...4D09 ','+84,216.30','+84.22%'],
+      ['鲸落','鲸','@whale_demo ↗','0x63C9...7F12 ','+62,180.90','+62.18%'],
+      ['北辰','北','@beichen_demo ↗','0xF04a...A827 ','+48,920.40','+48.92%'],
+      ['波段旅人','波','@swing_demo ↗','0x92Bd...C610 ','+36,714.80','+36.71%'],
+      ['青禾','青','@qinghe_demo ↗','0xA16c...D284 ','−8,430.20','−8.43%']
+    ];
+    $$('.trader-card').forEach((card,index) => {
+      const profile = traderProfiles[index]; if(!profile) return;
+      $('.info strong',card).childNodes[0].nodeValue = profile[0] + ' ';
+      $('.avatar',card).textContent = profile[1]; $('.info small',card).textContent = profile[2];
+      $('.card-address',card).childNodes[0].nodeValue = profile[3];
+      $('.return-value',card).textContent = profile[4];
+      $('.return-rate',card)?.remove();
+      if(index === 5){ $('.return-value',card).style.color='var(--red)'; }
+    });
+    $$('.return-rate').forEach(el => el.remove());
+    $$('.copy-scale > span:first-child').forEach(el => { el.textContent = el.textContent.split('·')[0].trim(); });
+    $$('.trader-card .badge, .leader-card .badge').forEach(badge => badge.textContent = '已认证');
+    const unverifiedBadge = $('.trader-card:last-child .badge');
+    if(unverifiedBadge){ unverifiedBadge.textContent = '未认证'; unverifiedBadge.classList.add('unverified'); }
+    $$('.nav-btn').forEach(btn => btn.addEventListener('click', () => {
+      $$('.nav-btn').forEach(b => b.classList.toggle('active', b === btn));
+      Object.entries(views).forEach(([k,v]) => v.classList.toggle('active', k === btn.dataset.view));
+      window.scrollTo({top:0,behavior:'smooth'});
+    }));
+    $$('[data-go]').forEach(btn => btn.addEventListener('click', () => $(`.nav-btn[data-view="${btn.dataset.go}"]`).click()));
+    $$('.feed-tab').forEach(btn => btn.addEventListener('click', () => {
+      $$('.feed-tab').forEach(b => b.classList.toggle('active', b === btn));
+      $$('.feed-item').forEach(item => item.style.display = item.dataset.type.includes(btn.dataset.feed) ? '' : 'none');
+    }));
+    const drawerMask = $('#drawerMask');
+    const positions = `<div class="detail-position"><div class="dp-top"><strong>ETH / USDC <span class="side-badge">多 20x</span></strong><span class="change">+$42,840</span></div><div class="dp-grid"><div><small>仓位价值</small><b>$418,200</b></div><div><small>开仓均价</small><b>$3,521.8</b></div><div><small>标记价格</small><b>$3,684.2</b></div><div><small>强平价格</small><b>$3,218.6</b></div></div></div><div class="detail-position"><div class="dp-top"><strong>BTC / USDC <span class="side-badge">多 8x</span></strong><span class="change">+$18,290</span></div><div class="dp-grid"><div><small>仓位价值</small><b>$285,100</b></div><div><small>开仓均价</small><b>$65,772</b></div><div><small>标记价格</small><b>$68,942</b></div><div><small>强平价格</small><b>$58,640</b></div></div></div><div class="detail-position"><div class="dp-top"><strong>ARB / USDC <span class="side-badge" style="color:var(--red);background:rgba(255,111,117,.1)">空 5x</span></strong><span class="change down">-$3,410</span></div><div class="dp-grid"><div><small>仓位价值</small><b>$94,800</b></div><div><small>开仓均价</small><b>$1.142</b></div><div><small>标记价格</small><b>$1.183</b></div><div><small>强平价格</small><b>$1.368</b></div></div></div>`;
+    const history = `<div class="detail-position"><div class="dp-top"><strong>SOL / USDC · 多</strong><span class="change">+$12,480</span></div><div class="dp-grid"><div><small>开仓</small><b>$162.40</b></div><div><small>平仓</small><b>$178.62</b></div><div><small>持仓时间</small><b>3天 8时</b></div><div><small>ROI</small><b style="color:var(--green)">+49.9%</b></div></div></div><div class="detail-position"><div class="dp-top"><strong>BTC / USDC · 空</strong><span class="change">+$8,920</span></div><div class="dp-grid"><div><small>开仓</small><b>$71,240</b></div><div><small>平仓</small><b>$69,870</b></div><div><small>持仓时间</small><b>18时 22分</b></div><div><small>ROI</small><b style="color:var(--green)">+15.4%</b></div></div></div>`;
+    $('#detailContent').innerHTML = positions;
+    function showDetail(){ Object.values(views).forEach(v => v.classList.remove('active')); views.detail.classList.add('active'); window.scrollTo({top:0,behavior:'smooth'}); }
+    $$('.openTrader').forEach(el => el.addEventListener('click', e => { if(e.target.closest('button')) return; showDetail(); }));
+    $$('.detailBack').forEach(btn => btn.addEventListener('click', () => $('.nav-btn[data-view="market"]').click()));
+    $('#closeDrawer').addEventListener('click', () => drawerMask.classList.remove('open'));
+    drawerMask.addEventListener('click', e => { if(e.target === drawerMask) drawerMask.classList.remove('open'); });
+    $$('.detail-tab').forEach(btn => btn.addEventListener('click', () => { $$('.detail-tab').forEach(b => b.classList.toggle('active', b === btn)); $('#detailContent').innerHTML = btn.dataset.detail === 'positions' ? positions : history; }));
+    const modal = $('#copyModal');
+    function openModal(mode='follow'){ modal.classList.add('open'); $$('.mode-btn').forEach(b => b.classList.toggle('active', b.dataset.mode === mode)); }
+    $$('.copyTrigger').forEach(btn => btn.addEventListener('click', e => { e.stopPropagation(); openModal('follow'); }));
+    $$('.reverseTrigger').forEach(btn => btn.addEventListener('click', () => openModal('reverse')));
+    $$('.mode-btn').forEach(btn => btn.addEventListener('click', () => $$('.mode-btn').forEach(b => b.classList.toggle('active', b === btn))));
+    function closeModal(){ modal.classList.remove('open'); }
+    $('#closeModal').addEventListener('click', closeModal); $('#cancelModal').addEventListener('click', closeModal);
+    modal.addEventListener('click', e => { if(e.target === modal) closeModal(); });
+    function toast(msg){ const t=$('#toast'); t.textContent=msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),1800); }
+    $('#confirmCopy').addEventListener('click', () => { closeModal(); drawerMask.classList.remove('open'); toast('跟单策略已开启'); });
+    $$('.toggle').forEach(btn => btn.addEventListener('click', () => { btn.classList.toggle('on'); toast(btn.classList.contains('on') ? '订阅已开启' : '订阅已关闭'); }));
+    $$('.subscribeAction').forEach(btn => btn.addEventListener('click', () => toast('订阅设置已更新')));
+    $$('.tradeAction').forEach(btn => btn.addEventListener('click', () => toast('已打开对应交易对')));
+    $$('.stopAction').forEach(btn => btn.addEventListener('click', () => { btn.closest('.position-row').style.opacity='.45'; btn.textContent='已停止'; btn.disabled=true; toast('跟单策略已停止'); }));
+    $('#walletBtn').addEventListener('click', () => toast('钱包已连接 · Arbitrum One'));
+
+    // Shared navigation inside the Figma-derived workbench rails.
+    $$('.rail-item').forEach(item => item.addEventListener('click', () => {
+      const label = item.textContent.trim();
+      if(label === '带单首页') $('.nav-btn[data-view="market"]').click();
+      if(label === '信息流') $('.nav-btn[data-view="intel"]').click();
+      if(label === '我的跟单') $('.nav-btn[data-view="manage"]').click();
+      if(label === '我的订阅'){ $('.nav-btn[data-view="manage"]').click(); setTimeout(() => $$('#manage-view .data-panel')[1]?.scrollIntoView({behavior:'smooth'}), 80); }
+      if(label === '跟单指南') toast('跟单指南已打开');
+    }));
+    $$('.rail-account button').forEach(btn => btn.addEventListener('click', () => toast('资金划转面板已打开')));
+
+    // Discovery scope and source filters.
+    $$('.segmented').forEach(group => $$('button',group).forEach(btn => btn.addEventListener('click', () => {
+      $$('button',group).forEach(b => b.classList.toggle('active', b === btn));
+      toast(btn.textContent.trim().startsWith('与我相关') ? '已筛选与你相关的信息' : '已显示全部信息');
+    })));
+    $$('.discovery-filter > b, .discovery-filter > span:not(:last-child)').forEach(filter => filter.addEventListener('click', () => {
+      $$('.discovery-filter > b, .discovery-filter > span:not(:last-child)').forEach(x => x.classList.remove('filter-active'));
+      filter.classList.add('filter-active');
+      const newsOnly = filter.textContent.includes('新闻');
+      const kolOnly = filter.textContent.includes('KOL');
+      $$('.news-card').forEach(card => card.classList.toggle('is-hidden', newsOnly ? !card.textContent.includes('新闻') : kolOnly ? card.textContent.includes('新闻') : false));
+    }));
+    $$('.market-subnav button').forEach(btn => btn.addEventListener('click', () => {
+      $$('.market-subnav button').forEach(b => b.classList.toggle('active', b === btn));
+      $$('.trader-card').forEach((card,i) => card.classList.toggle('is-hidden', btn.textContent.includes('关注') && i > 2));
+    }));
+
+    // Copy-market search, verification filter and sorting.
+    const marketSearch = $('#market-view input.search');
+    function filterTraders(){
+      const query = (marketSearch?.value || '').trim().toLowerCase();
+      const verification = $$('#market-view select')[1]?.value || '认证状态';
+      $$('.trader-card').forEach(card => {
+        const matchesText = !query || card.textContent.toLowerCase().includes(query);
+        const badge = $('.badge',card)?.textContent || '';
+        const matchesVerification = verification === '认证状态' || badge === verification;
+        card.classList.toggle('is-hidden', !(matchesText && matchesVerification));
+      });
+    }
+    marketSearch?.addEventListener('input', filterTraders);
+    $$('#market-view select')[1]?.addEventListener('change', filterTraders);
+    const sortSelect = $$('#market-view select').at(-1);
+    sortSelect?.addEventListener('change', () => {
+      const cards = $$('.trader-card');
+      cards.reverse().forEach(card => leaderGrid.appendChild(card));
+      toast(`已按${sortSelect.value}重新排序`);
+    });
+    $$('.page-buttons button').forEach(btn => btn.addEventListener('click', () => {
+      if(btn.textContent === '上一页' || btn.textContent === '下一页'){ toast(`已切换到${btn.textContent === '下一页' ? '下一' : '上一'}页`); return; }
+      $$('.page-buttons button').forEach(b => b.classList.remove('active')); btn.classList.add('active'); toast(`当前第 ${btn.textContent} 页`);
+    }));
+    $$('.bookmark-btn').forEach(btn => btn.addEventListener('click', e => { e.stopPropagation(); btn.classList.toggle('saved'); toast(btn.classList.contains('saved') ? '已加入我的关注' : '已取消关注'); }));
+
+    // Buttons and table actions added by the imported Figma pages.
+    $$('.data-panel .table-action').forEach(cell => cell.addEventListener('click', () => {
+      if(cell.textContent.includes('停止')){ cell.textContent='已停止'; cell.closest('tr').style.opacity='.55'; toast('跟单策略已停止'); }
+      else if(cell.textContent.includes('续订')){ cell.textContent='已发送续订提醒'; toast('续订提醒已发送'); }
+      else { cell.textContent='已取消'; cell.closest('tr').style.opacity='.55'; toast('订阅已取消'); }
+    }));
+    $$('.manage-head .secondary-btn').forEach(btn => btn.addEventListener('click', () => toast('跟单设置已打开')));
+    $$('.data-panel-head button').forEach(btn => btn.addEventListener('click', () => {
+      const text = btn.textContent.trim(); toast(text.includes('导出') ? '账户数据已准备导出' : `${text}已打开`);
+    }));
+    $$('.figma-feed-switch button').forEach(btn => btn.addEventListener('click', () => {
+      $$('.figma-feed-switch button').forEach(b => b.classList.toggle('active', b === btn)); toast(`已切换至${btn.textContent.trim()}`);
+    }));
+    $('.figma-feed-head .icon-btn')?.addEventListener('click', () => { $('#market-view').classList.add('feed-collapsed'); toast('信息流侧栏已收起'); });
+    $('.feed-expand')?.addEventListener('click', () => { $('#market-view').classList.remove('feed-collapsed'); toast('信息流侧栏已展开'); });
+    $$('.equityTransfer').forEach(btn => btn.addEventListener('click', () => toast('资金划转面板已打开')));
+    $$('.equityDetails').forEach(btn => btn.addEventListener('click', () => toast('跟单账户权益明细已打开')));
+    $$('.browserAction').forEach(btn => btn.addEventListener('click', () => toast('链上浏览器已打开')));
+    $$('.period-tabs button').forEach(btn => btn.addEventListener('click', () => { $$('.period-tabs button').forEach(b => b.classList.toggle('active', b === btn)); toast(`已切换至${btn.textContent}数据`); }));
+  </script>
+</body>
+</html>
