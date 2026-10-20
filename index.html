@@ -236,6 +236,9 @@
     .mode-switch { display:grid; grid-template-columns:1fr 1fr; background:var(--bg); padding:3px; border-radius:4px; margin-bottom:15px; }
     .mode-btn { height:32px; border:0; background:transparent; color:var(--muted); border-radius:3px; cursor:pointer; }
     .mode-btn.active { background:var(--surface-3); color:var(--text); }
+    .size-mode-switch { margin-bottom:14px; }
+    .size-mode-btn { height:32px; border:0; background:transparent; color:var(--muted); border-radius:3px; cursor:pointer; }
+    .size-mode-btn.active { background:var(--surface-3); color:var(--text); }
     .field { margin-bottom:14px; }
     .field label { display:flex; justify-content:space-between; color:var(--soft); font-size:11px; margin-bottom:7px; }
     .field label span { color:var(--muted); }
@@ -243,6 +246,22 @@
     .field input:focus { border-color:var(--lime-dark); }
     .risk-note { color:var(--muted); font-size:10px; line-height:1.5; padding:10px; background:var(--bg); margin-bottom:14px; }
     .modal-footer { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+    .copy-settings-modal { width:min(760px,100%); max-height:calc(100vh - 32px); display:flex; flex-direction:column; }
+    .copy-settings-modal .modal-body { overflow-y:auto; padding:0; }
+    .copy-settings-content { padding:18px; }
+    .settings-section { padding:16px; margin-bottom:12px; background:var(--surface-2); border:1px solid var(--line); border-radius:6px; }
+    .settings-section h4 { margin:0 0 14px; font-size:12px; }
+    .settings-grid { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+    .setting-field label,.setting-row > label:first-child { display:flex; justify-content:space-between; color:var(--soft); font-size:10px; margin-bottom:7px; }
+    .setting-field label span { color:var(--muted); }
+    .setting-field input,.setting-field select { width:100%; height:36px; padding:0 10px; border:1px solid var(--line); border-radius:4px; background:var(--bg); color:var(--text); outline:none; }
+    .setting-field input:focus,.setting-field select:focus { border-color:var(--lime-dark); }
+    .setting-row { display:flex; align-items:center; justify-content:space-between; gap:14px; min-height:38px; }
+    .setting-row > label:first-child { margin:0; display:block; }.setting-row > label:first-child small { display:block; color:var(--muted); margin-top:4px; font-size:9px; }
+    .settings-switch { position:relative; width:36px; height:20px; flex:0 0 auto; }.settings-switch input { position:absolute; opacity:0; }.settings-switch span { display:block; width:36px; height:20px; border-radius:10px; background:#343d41; cursor:pointer; transition:.2s; }.settings-switch span::after { content:""; display:block; width:16px; height:16px; margin:2px; border-radius:50%; background:#8d999e; transition:.2s; }.settings-switch input:checked + span { background:#1d6b3a; }.settings-switch input:checked + span::after { transform:translateX(16px); background:var(--lime); }
+    .coin-range { display:flex; flex-wrap:wrap; gap:7px; }.coin-choice input { position:absolute; opacity:0; }.coin-choice span { display:block; padding:7px 10px; border:1px solid var(--line); border-radius:4px; color:var(--muted); font-size:10px; cursor:pointer; }.coin-choice input:checked + span { color:var(--lime); border-color:#3a6548; background:#17271d; }
+    .setting-inline { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:10px; }
+    .copy-settings-footer { position:sticky; bottom:0; padding:14px 18px; background:var(--surface); border-top:1px solid var(--line); }
     .toast { position:fixed; z-index:100; bottom:22px; left:50%; transform:translate(-50%,16px); opacity:0; background:#e6fbd0; color:#11170d; padding:10px 14px; border-radius:4px; pointer-events:none; transition:.2s; font-weight:600; font-size:12px; }
     .toast.show { opacity:1; transform:translate(-50%,0); }
     #market-view.active { display:grid; grid-template-columns:320px minmax(0,1fr); grid-template-rows:auto minmax(0,1fr); height:calc(100vh - 72px); min-height:0; overflow:hidden; align-items:start; align-content:start; }
@@ -398,7 +417,10 @@
     .profile-actions { display:flex; flex-direction:column; align-items:stretch; gap:8px; min-width:250px; }
     .profile-action-row { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
     .profile-action-row button { width:100%; }
-    .followAction.active { color:var(--lime); border-color:#3b6b48; background:#17251b; }
+    .profile-action-row:first-child { display:flex; justify-content:flex-end; gap:14px; }
+    .profile-action-row:first-child button { width:auto; height:28px; border:0; background:transparent; color:var(--muted); padding:0 3px; }
+    .profile-action-row:first-child button:hover { color:var(--text); background:transparent; }
+    .profile-action-row:first-child .subscribeAction,.profile-action-row:first-child .followAction.active { color:var(--lime); border:0; background:transparent; }
     .detail-kpis { display:grid; grid-template-columns:repeat(4,1fr); border:1px solid var(--line); background:var(--surface); border-radius:6px; margin-bottom:16px; }
     .detail-kpi { padding:18px; border-right:1px solid var(--line); }
     .detail-kpi:last-child { border:0; }.detail-kpi small { color:var(--muted); font-size:10px; }.detail-kpi b { display:block; margin-top:8px; font-size:20px; }
@@ -437,7 +459,8 @@
     .detail-period-bar button { height:32px; padding:0 14px; border:0; background:transparent; color:var(--muted); border-radius:4px; cursor:pointer; }
     .detail-period-bar button.active { background:var(--surface-3); color:var(--text); }
     .detail-data-grid { display:grid; grid-template-columns:360px minmax(0,1fr); gap:16px; margin-bottom:16px; scroll-margin-top:76px; }
-    #positionsSection, #historySection { scroll-margin-top:76px; }
+    #positionsSection, #historySection, #followersSection { scroll-margin-top:76px; }
+    .masked-address { font-family:ui-monospace,SFMono-Regular,Menlo,monospace; color:var(--soft); letter-spacing:0; }
     .performance-summary { padding:20px; background:var(--surface); border:1px solid var(--line); border-radius:6px; }
     .performance-summary h2 { margin:0 0 18px; font-size:16px; }
     .performance-summary .detail-kpis { grid-template-columns:1fr 1fr; border:0; margin:0; background:transparent; }
@@ -491,6 +514,7 @@
       .discovery-columns { grid-template-columns:1fr; }
       .discovery-filter { flex-wrap:wrap; }
       .discovery-search { width:100%; margin-left:0; order:2; }
+      .settings-grid { grid-template-columns:1fr; }
       .overview-grid { grid-template-columns:1fr 1fr; }
       .detail-overview { grid-template-columns:1fr; }
       .detail-data-grid { grid-template-columns:1fr; }
@@ -689,7 +713,7 @@
   </div>
 
   <div class="modal-mask" id="feedModal"><div class="modal feed-modal"><div class="modal-head"><h3>Machi Big Brother 全部信息流</h3><button class="icon-btn" id="closeFeedModal" aria-label="关闭"><i data-lucide="x"></i></button></div><div class="modal-body"><div class="full-feed-list" id="fullFeedList"></div></div></div></div>
-  <div class="modal-mask" id="copyModal"><div class="modal"><div class="modal-head"><h3>设置跟单参数</h3><button class="icon-btn" id="closeModal" aria-label="关闭"><i data-lucide="x"></i></button></div><div class="modal-body"><div class="mode-switch"><button class="mode-btn active" data-mode="follow">正向跟单</button><button class="mode-btn" data-mode="reverse">反向跟单</button></div><div class="field"><label>分配保证金 <span>可用 $28,420.16</span></label><input value="5,000 USDC"></div><div class="field"><label>单笔保证金上限 <span>建议 ≤ 15%</span></label><input value="750 USDC"></div><div class="field"><label>最大止损比例 <span>账户级</span></label><input value="12%"></div><div class="risk-note">策略开启后，将按交易员仓位变化自动执行。滑点、延迟和市场深度可能造成实际成交差异。</div><div class="modal-footer"><button class="secondary-btn" id="cancelModal">取消</button><button class="primary-btn" id="confirmCopy">确认开启</button></div></div></div></div>
+  <div class="modal-mask" id="copyModal"><div class="modal copy-settings-modal"><div class="modal-head"><h3>跟单设置</h3><button class="icon-btn" id="closeModal" aria-label="关闭"><i data-lucide="x"></i></button></div><div class="modal-body"><div class="copy-settings-content"><section class="settings-section"><h4>基础设置</h4><div class="mode-switch"><button class="mode-btn active" data-mode="follow">正向跟单</button><button class="mode-btn" data-mode="reverse">反向跟单</button></div><div class="mode-switch size-mode-switch"><button class="size-mode-btn active" data-size-mode="fixed">固定金额</button><button class="size-mode-btn" data-size-mode="ratio">按比例跟单</button></div><div class="settings-grid"><div class="setting-field fixed-size-field"><label>每笔跟单金额 <span>USDC</span></label><input type="number" value="500" min="10"></div><div class="setting-field ratio-size-field" hidden><label>跟随仓位比例 <span>%</span></label><input type="number" value="20" min="1" max="100"></div><div class="setting-field"><label>最大杠杆 <span>不超过交易者</span></label><select><option>3x</option><option>5x</option><option selected>10x</option><option>20x</option><option>跟随交易者</option></select></div></div></section><section class="settings-section"><h4>仓位与成交限制</h4><div class="settings-grid"><div class="setting-field"><label>单币种最大仓位 <span>USDC</span></label><input type="number" value="2000"></div><div class="setting-field"><label>总仓位上限 <span>USDC</span></label><input type="number" value="8000"></div><div class="setting-field"><label>最大允许滑点 <span>%</span></label><input type="number" value="0.5" step="0.1" min="0.1"></div><div class="setting-field"><label>信号最大延迟 <span>秒</span></label><input id="signalDelayInput" type="number" value="30" min="1"></div></div><div class="setting-row"><label>超时放弃执行<small>信号延迟超过设定时间时不再下单</small></label><label class="settings-switch"><input id="abandonDelayedSignal" type="checkbox" checked><span></span></label></div><div class="setting-field" style="margin-top:12px"><label>可跟币种范围 <span>多选</span></label><div class="coin-range"><label class="coin-choice"><input type="checkbox"><span>全部</span></label><label class="coin-choice"><input type="checkbox" checked><span>BTC</span></label><label class="coin-choice"><input type="checkbox" checked><span>ETH</span></label><label class="coin-choice"><input type="checkbox" checked><span>SOL</span></label><label class="coin-choice"><input type="checkbox"><span>主流币</span></label><label class="coin-choice"><input type="checkbox"><span>其他</span></label></div></div></section><section class="settings-section"><h4>退出与异常处理</h4><div class="setting-row"><label>独立止盈止损<small>达到阈值后独立于交易者平仓</small></label><label class="settings-switch"><input id="independentTpSl" type="checkbox" checked><span></span></label></div><div class="setting-inline tp-sl-fields"><div class="setting-field"><label>止盈比例 <span>%</span></label><input type="number" value="25"></div><div class="setting-field"><label>止损比例 <span>%</span></label><input type="number" value="12"></div></div><div class="setting-row"><label>同步交易者平仓<small>交易者全部或部分平仓时同步执行</small></label><label class="settings-switch"><input type="checkbox" checked><span></span></label></div><div class="setting-field" style="margin-top:12px"><label>交易者爆仓后的处理方式</label><select><option selected>立即暂停跟单并通知</option><option>停止跟单并撤销全部挂单</option><option>继续跟随后续交易</option></select></div></section><section class="settings-section"><h4>账户级风险保护</h4><div class="settings-grid"><div class="setting-field"><label>每日最大亏损 <span>USDC</span></label><input type="number" value="500"></div><div class="setting-field"><label>每日最大亏损比例 <span>%</span></label><input type="number" value="8"></div></div><div class="setting-row"><label>达到上限自动停止跟单<small>停止当日新信号，次日可手动恢复</small></label><label class="settings-switch"><input type="checkbox" checked><span></span></label></div></section><div class="risk-note">跟单成交价格可能因滑点、网络延迟和市场深度与交易者不同。设置仅对后续新订单生效。</div></div><div class="modal-footer copy-settings-footer"><button class="secondary-btn" id="cancelModal">取消</button><button class="primary-btn" id="confirmCopy">保存并开启</button></div></div></div></div>
   <div class="toast" id="toast">设置已更新</div>
 
   <script>
@@ -699,6 +723,8 @@
     function renderIcons(){ if(window.lucide) lucide.createIcons(); }
     renderIcons();
     $('#performanceSection .detail-kpis')?.insertAdjacentHTML('beforeend', '<div class="detail-kpi"><small>跟单用户收益（USDC）</small><b style="color:var(--lime)">+36,842.90</b></div>');
+    $('.detail-page-tabs')?.insertAdjacentHTML('beforeend', '<button class="detail-page-tab" data-target="followersSection">跟单用户</button>');
+    $('#historySection')?.insertAdjacentHTML('afterend', `<section class="detail-section" id="followersSection"><h2>跟单用户</h2><div class="table-wrap"><table class="data-table"><thead><tr><th>跟单用户地址</th><th>总投入金额（USDC）</th><th>跟单天数</th><th>累计盈亏（USDC）</th></tr></thead><tbody><tr><td class="masked-address">0x91D...6E2A</td><td>48,000.00</td><td>128 天</td><td class="status-live">+12,842.60</td></tr><tr><td class="masked-address">0x7A3...92C1</td><td>32,500.00</td><td>96 天</td><td class="status-live">+8,416.20</td></tr><tr><td class="masked-address">0xB82...4D09</td><td>25,000.00</td><td>74 天</td><td class="status-live">+5,284.90</td></tr><tr><td class="masked-address">0x63C...7F12</td><td>18,800.00</td><td>63 天</td><td class="status-live">+3,742.40</td></tr><tr><td class="masked-address">0xF04...A827</td><td>12,000.00</td><td>41 天</td><td style="color:var(--red)">−684.30</td></tr><tr><td class="masked-address">0x92B...C610</td><td>8,500.00</td><td>28 天</td><td class="status-live">+1,126.10</td></tr></tbody></table></div></section>`);
     $('.detail-feed-list')?.insertAdjacentHTML('beforeend', `
       <article class="news-card detail-feed-card" data-source="kol"><div class="news-author"><span class="avatar green"><img src="https://unavatar.io/x/machibigbrother" alt="Machi Big Brother"></span><span class="who"><strong>Machi Big Brother</strong><small>@machibigbrother · 1 小时前</small></span></div><p>Paper. Higher.</p><div class="news-market"><span class="token-icon">BTC</span><b>BTCUSDC</b><span>68,942.10</span><em>+1.27%</em><button class="tradeAction">立即交易</button></div></article>
       <article class="news-card detail-feed-card" data-source="trade"><div class="news-author"><span class="avatar green"><img src="https://unavatar.io/x/machibigbrother" alt="Machi Big Brother"></span><span class="who"><strong>Machi Big Brother</strong><small>链上地址 · 52 分钟前</small></span></div><p>BTCUSDC 多仓加仓 35%，成交均价 68,410.20 USDC，当前总仓位价值 285,100 USDC。</p><div class="news-market"><span class="token-icon">BTC</span><b>BTCUSDC</b><span>68,942.10</span><em>+1.27%</em><button class="tradeAction">立即交易</button></div></article>
@@ -780,10 +806,24 @@
     drawerMask.addEventListener('click', e => { if(e.target === drawerMask) drawerMask.classList.remove('open'); });
     $$('.detail-tab').forEach(btn => btn.addEventListener('click', () => { $$('.detail-tab').forEach(b => b.classList.toggle('active', b === btn)); $('#detailContent').innerHTML = btn.dataset.detail === 'positions' ? positions : history; }));
     const modal = $('#copyModal');
-    function openModal(mode='follow'){ modal.classList.add('open'); $$('.mode-btn').forEach(b => b.classList.toggle('active', b.dataset.mode === mode)); }
+    function openModal(mode='follow', editing=false){
+      modal.classList.add('open');
+      $$('.mode-btn').forEach(b => b.classList.toggle('active', b.dataset.mode === mode));
+      $('#confirmCopy').textContent = editing ? '保存设置' : '保存并开启';
+      modal.dataset.editing = editing ? 'true' : 'false';
+    }
     $$('.copyTrigger').forEach(btn => btn.addEventListener('click', e => { e.stopPropagation(); openModal('follow'); }));
     $$('.reverseTrigger').forEach(btn => btn.addEventListener('click', () => openModal('reverse')));
     $$('.mode-btn').forEach(btn => btn.addEventListener('click', () => $$('.mode-btn').forEach(b => b.classList.toggle('active', b === btn))));
+    $$('.size-mode-btn').forEach(btn => btn.addEventListener('click', () => {
+      $$('.size-mode-btn').forEach(b => b.classList.toggle('active', b === btn));
+      $('.fixed-size-field').hidden = btn.dataset.sizeMode !== 'fixed';
+      $('.ratio-size-field').hidden = btn.dataset.sizeMode !== 'ratio';
+    }));
+    $('#independentTpSl')?.addEventListener('change', e => { $('.tp-sl-fields').hidden = !e.target.checked; });
+    $('#abandonDelayedSignal')?.addEventListener('change', e => { $('#signalDelayInput').disabled = !e.target.checked; });
+    const coinChoices = $$('.coin-choice input');
+    coinChoices[0]?.addEventListener('change', e => coinChoices.slice(1).forEach(input => { input.checked = e.target.checked; }));
     function closeModal(){ modal.classList.remove('open'); }
     $('#closeModal').addEventListener('click', closeModal); $('#cancelModal').addEventListener('click', closeModal);
     modal.addEventListener('click', e => { if(e.target === modal) closeModal(); });
@@ -794,7 +834,13 @@
       try { await navigator.clipboard.writeText(fullAddress); toast('完整地址已复制'); }
       catch { toast(fullAddress); }
     }));
-    $('#confirmCopy').addEventListener('click', () => { closeModal(); drawerMask.classList.remove('open'); toast('跟单策略已开启'); });
+    $('#confirmCopy').addEventListener('click', () => {
+      const invalidNumber = $$('input[type="number"]', modal).find(input => !input.disabled && !input.closest('[hidden]') && Number(input.value) <= 0);
+      if(invalidNumber){ invalidNumber.focus(); toast('请输入有效的正数'); return; }
+      if(!coinChoices.some(input => input.checked)){ toast('请至少选择一个可跟币种'); return; }
+      const editing = modal.dataset.editing === 'true';
+      closeModal(); drawerMask.classList.remove('open'); toast(editing ? '跟单设置已保存' : '跟单策略已开启');
+    });
     $$('.toggle').forEach(btn => btn.addEventListener('click', () => { btn.classList.toggle('on'); toast(btn.classList.contains('on') ? '订阅已开启' : '订阅已关闭'); }));
     $$('#intel-view .news-card[data-source="kol"]').forEach(card => {
       const authorMeta = $('.who small', card)?.textContent || '';
@@ -982,7 +1028,7 @@
       $('b', summary).textContent = rows.length;
       $('span', summary).textContent = `运行中 ${rows.length - paused} · 已暂停 ${paused}`;
     }
-    $$('.manageModify').forEach(btn => btn.addEventListener('click', () => toast('跟单参数修改面板已打开')));
+    $$('.manageModify').forEach(btn => btn.addEventListener('click', () => openModal('follow', true)));
     $$('.managePause').forEach(btn => btn.addEventListener('click', () => {
       const paused = btn.textContent === '恢复';
       const row = btn.closest('tr');
